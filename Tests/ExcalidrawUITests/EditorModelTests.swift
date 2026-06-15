@@ -64,6 +64,72 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.viewport.scrollX, 5) // 10 / zoom(2)
     }
 
+    func testPropertySettersApplyToSelection() {
+        let m = EditorModel()
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 50, y: 50))
+        m.setBackgroundColor("#a5d8ff")
+        m.setFillStyle(.crossHatch)
+        m.setStrokeStyle(.dashed)
+        m.setOpacity(60)
+        let e = m.controller.selectedElements.first
+        XCTAssertEqual(e?.base.backgroundColor, "#a5d8ff")
+        XCTAssertEqual(e?.base.fillStyle, .crossHatch)
+        XCTAssertEqual(e?.base.strokeStyle, .dashed)
+        XCTAssertEqual(e?.base.opacity, 60)
+    }
+
+    func testActionPassthroughs() {
+        let m = EditorModel()
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 40, y: 40))
+        m.controller.selectAll()
+        m.duplicate()
+        XCTAssertEqual(m.controller.scene.visibleElements.count, 2)
+        m.controller.selectAll()
+        m.bringToFront() // should not crash
+        m.sendToBack()
+    }
+
+    func testTextToolCreatesAndCommits() {
+        let m = EditorModel()
+        m.select(tool: .text)
+        m.pointer(.down, at: CGPoint(x: 10, y: 10))
+        XCTAssertNotNil(m.editingTextID)
+        m.editingText = "Hello"
+        m.commitText()
+        XCTAssertNil(m.editingTextID)
+        XCTAssertEqual(m.activeTool, .selection)
+        guard case let .text(props) = m.controller.scene.visibleElements.first?.kind else { return XCTFail("text") }
+        XCTAssertEqual(props.text, "Hello")
+    }
+
+    func testEmptyTextCommitAddsNothing() {
+        let m = EditorModel()
+        m.select(tool: .text)
+        m.pointer(.down, at: CGPoint(x: 10, y: 10))
+        m.editingText = "   "
+        m.commitText()
+        XCTAssertTrue(m.controller.scene.visibleElements.isEmpty)
+    }
+
+    func testInsertImage() {
+        let payload = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        let data = Data(base64Encoded: payload)!
+        let m = EditorModel()
+        m.insertImage(data: data, mimeType: "image/png", viewSize: CGSize(width: 400, height: 400))
+        XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
+        guard case .image = m.controller.scene.visibleElements.first?.kind else { return XCTFail("image") }
+        XCTAssertEqual(m.controller.scene.files.count, 1)
+    }
+
+    func testExportSVG() {
+        let m = EditorModel()
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 50, y: 50))
+        XCTAssertTrue(m.exportSVG().contains("<svg"))
+    }
+
     func testExport() {
         let m = EditorModel()
         XCTAssertNil(m.exportPNG()) // empty scene

@@ -50,7 +50,11 @@ Legend: 🎯 milestone deliverable · 🧪 test focus · ⚠️ risk/hard part.
 - 🧪 Transform math tests; XCUITest: draw rect → move → resize → undo → export, on iPhone + iPad.
 - 🎯 **Vertical slice complete**: create/edit a drawing from scratch and export it.
 
-## Phase 4 — Full tool set & properties
+## Phase 4 — Full tool set & properties ✅
+
+> **Status: complete.** Tools added: arrow (with arrowheads), freedraw (FreehandKit pressure outlines), text (on-canvas editing), image insert (PhotosPicker), eraser, hand. Properties: stroke/background colour, fill style, stroke style, stroke width, opacity — applied to current-item defaults and the selection. Actions: group/ungroup, duplicate, lock, z-order (front/back/forward/backward), align, flip — all undoable. Copy/paste via the `.excalidraw` payload (carries image files). SVG export (`SVGExporter`). New `FreehandKit` (perfect-freehand port). Full toolbar + properties bar in `EditorView`; XCUITest draws a shape, freedraws, places text, and exports on the iOS 17 simulator. **Deferred:** font family/size & arrowhead-type pickers, exact perfect-freehand parity (no local reference), bundled fonts + exact text metrics, laser pointer, eraser/laser animated trails (Phase 5+).
+
+## Phase 4 — Full tool set & properties (original plan)
 **Goal:** all core element types and styling.
 - Tools: arrow (straight/curved), freedraw (`FreehandKit` port, pressure via `UITouch.force` + coalesced touches), text (Core Text `TextLayout`, on-canvas editing), image (insert from Photos/Files, files store), eraser (AnimatedTrail + intersection), hand/pan, laser.
 - Properties panel: background color, fill style, stroke style, roundness, opacity, font family/size/text align, arrowheads, arrow type. Color picker + eyedropper.

@@ -16,7 +16,7 @@ public final class ImageDecoder {
         return image
     }
 
-    static func decode(dataURL: String) -> CGImage? {
+    public static func decode(dataURL: String) -> CGImage? {
         // data:[<mime>][;base64],<payload>
         guard let commaIndex = dataURL.firstIndex(of: ",") else { return nil }
         let payload = String(dataURL[dataURL.index(after: commaIndex)...])

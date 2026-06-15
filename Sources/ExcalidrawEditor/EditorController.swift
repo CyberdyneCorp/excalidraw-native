@@ -427,6 +427,70 @@ public final class EditorController {
         selectedIDs = Set(newIDs)
     }
 
+    // MARK: Text & image creation
+
+    /// Create an empty text element at `point` and select it. Returns its id so
+    /// the UI can drive on-canvas editing; commit happens via `setText`.
+    @discardableResult
+    public func createText(at point: Point, fontSize: Double = 20) -> String {
+        let base = currentItem.makeBase(id: nextID(), seed: nextSeed(), x: point.x, y: point.y)
+        let props = TextProperties(fontSize: fontSize, text: "", originalText: "")
+        let element = ExcalidrawElement(base: base, kind: .text(props))
+        store.modifyScene { $0.add(element) }
+        selectedIDs = [element.id]
+        return element.id
+    }
+
+    /// Set a text element's content (committing one undo step), or remove it if
+    /// the text is empty.
+    public func setText(id: String, _ text: String) {
+        guard let element = scene.element(id: id), case var .text(props) = element.kind else { return }
+        if text.isEmpty {
+            store.modifyScene { scene in
+                scene = Scene(
+                    elements: scene.elements.filter { $0.id != id },
+                    appState: scene.appState, files: scene.files
+                )
+            }
+            store.commit()
+            selectedIDs.remove(id)
+            return
+        }
+        store.transaction { scene in
+            var e = element
+            props.text = text
+            props.originalText = text
+            // Rough width/height estimate until full Core Text measurement (Phase 5).
+            let lines = text.components(separatedBy: "\n")
+            e.base.width = Double(lines.map(\.count).max() ?? 0) * props.fontSize * 0.6
+            e.base.height = Double(lines.count) * props.fontSize * props.lineHeight
+            e.kind = .text(props)
+            scene.replace(e)
+        }
+    }
+
+    /// Insert an image element backed by a stored file, and select it.
+    @discardableResult
+    public func insertImage(
+        dataURL: String, mimeType: String, at point: Point, width: Double, height: Double, created: Int = 0
+    ) -> String {
+        let fileId = nextID()
+        let base = {
+            var b = currentItem.makeBase(id: nextID(), seed: nextSeed(), x: point.x, y: point.y)
+            b.width = width
+            b.height = height
+            b.backgroundColor = "transparent"
+            return b
+        }()
+        let element = ExcalidrawElement(base: base, kind: .image(ImageProperties(fileId: fileId, status: .saved)))
+        store.transaction { scene in
+            scene.files[fileId] = BinaryFileData(mimeType: mimeType, id: fileId, dataURL: dataURL, created: created)
+            scene.add(element)
+        }
+        selectedIDs = [element.id]
+        return element.id
+    }
+
     private func filesFor(_ elements: [ExcalidrawElement]) -> [String: BinaryFileData] {
         var result: [String: BinaryFileData] = [:]
         for element in elements {

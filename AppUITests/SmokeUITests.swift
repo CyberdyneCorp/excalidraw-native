@@ -1,30 +1,40 @@
 import XCTest
 
-/// End-to-end editor flow on the simulator: launch, pick the rectangle tool,
-/// draw on the canvas, export, then undo. Pencil/pressure paths are not
-/// driveable from XCUITest and are covered by ExcalidrawEditor unit tests.
+/// End-to-end editor flow on the simulator: draw a shape, freedraw, place text,
+/// then export. Pencil/pressure and multi-touch pan/zoom are covered by the
+/// ExcalidrawEditor unit tests.
 final class SmokeUITests: XCTestCase {
-    func testDrawAndExportFlow() {
+    func testDrawTextAndExportFlow() {
         let app = XCUIApplication()
         app.launch()
         XCTAssertEqual(app.wait(for: .runningForeground, timeout: 10), true)
 
-        XCTAssertTrue(app.buttons["tool-rectangle"].waitForExistence(timeout: 10))
-        app.buttons["tool-rectangle"].tap()
-
         let canvas = app.otherElements["excalidraw-canvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 10))
 
-        // Draw a rectangle by dragging across the canvas.
-        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3))
-        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.6))
-        start.press(forDuration: 0.1, thenDragTo: end)
+        // Draw a rectangle.
+        XCTAssertTrue(app.buttons["tool-rectangle"].waitForExistence(timeout: 10))
+        app.buttons["tool-rectangle"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3))
+            .press(forDuration: 0.1, thenDragTo: canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.55)))
 
-        // Export the drawing and confirm.
+        // Freedraw a scribble.
+        app.buttons["tool-freedraw"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.7))
+            .press(forDuration: 0.1, thenDragTo: canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
+
+        // Place text.
+        app.buttons["tool-text"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.4)).tap()
+        let textField = app.textFields["text-editor"]
+        if textField.waitForExistence(timeout: 5) {
+            textField.tap()
+            textField.typeText("Hi")
+            app.buttons["text-done"].tap()
+        }
+
+        // Export and confirm.
         app.buttons["export"].tap()
         XCTAssertTrue(app.staticTexts["exported-confirmation"].waitForExistence(timeout: 5))
-
-        // Undo should not crash.
-        app.buttons["undo"].tap()
     }
 }

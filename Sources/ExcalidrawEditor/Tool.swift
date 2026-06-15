@@ -10,6 +10,7 @@ public enum Tool: String, Sendable, CaseIterable {
     case line
     case arrow
     case freedraw
+    case text
     case eraser
     case hand
 
@@ -22,7 +23,7 @@ public enum Tool: String, Sendable, CaseIterable {
         case .line: return .line(LinearProperties())
         case .arrow: return .arrow(ArrowProperties())
         case .freedraw: return .freedraw(FreedrawProperties())
-        case .selection, .eraser, .hand: return nil
+        case .selection, .eraser, .hand, .text: return nil
         }
     }
 
