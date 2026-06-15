@@ -23,6 +23,8 @@ public final class EditorController {
     private enum Interaction {
         case idle
         case creating(id: String, origin: Point, moved: Bool)
+        case freehand(id: String, origin: Point)
+        case erasing(touched: Set<String>)
         case moving(origin: Point, originals: [String: ExcalidrawElement])
         case boxSelecting(origin: Point)
         case resizing(handle: TransformHandle, bounds: BoundingBox, originals: [String: ExcalidrawElement])
@@ -67,11 +69,19 @@ public final class EditorController {
 
     public func pointerDown(_ event: PointerEvent) {
         selectionRect = nil
-        if let kind = activeTool.elementKind {
-            beginCreating(kind: kind, at: event.scenePoint)
-            return
+        switch activeTool {
+        case .eraser:
+            interaction = .erasing(touched: [])
+            eraseAt(event.scenePoint)
+        case .hand:
+            break // panning is handled by the UI layer (viewport)
+        default:
+            if let kind = activeTool.elementKind {
+                beginCreating(kind: kind, at: event.scenePoint, pressure: event.pressure)
+            } else {
+                beginSelectionInteraction(event)
+            }
         }
-        beginSelectionInteraction(event)
     }
 
     public func pointerMove(_ event: PointerEvent) {
@@ -79,6 +89,10 @@ public final class EditorController {
         case let .creating(id, origin, _):
             updateCreating(id: id, origin: origin, to: event.scenePoint)
             interaction = .creating(id: id, origin: origin, moved: true)
+        case let .freehand(id, origin):
+            appendFreehandPoint(id: id, origin: origin, point: event.scenePoint, pressure: event.pressure)
+        case .erasing:
+            eraseAt(event.scenePoint)
         case let .moving(origin, originals):
             let dx = event.scenePoint.x - origin.x
             let dy = event.scenePoint.y - origin.y
@@ -118,6 +132,11 @@ public final class EditorController {
         switch interaction {
         case let .creating(id, _, moved):
             finishCreating(id: id, moved: moved)
+        case let .freehand(id, _):
+            finishFreehand(id: id)
+        case .erasing:
+            store.commit()
+            selectedIDs = []
         case .moving, .resizing, .rotating:
             store.commit()
         case let .boxSelecting(origin):
@@ -170,12 +189,24 @@ public final class EditorController {
 
     // MARK: Interaction helpers
 
-    private func beginCreating(kind: ElementKind, at origin: Point) {
+    private func beginCreating(kind: ElementKind, at origin: Point, pressure: Double) {
         let base = currentItem.makeBase(id: nextID(), seed: nextSeed(), x: origin.x, y: origin.y)
         let element: ExcalidrawElement
-        if case .line = kind {
+        switch kind {
+        case .line:
             element = ExcalidrawElement(base: base, kind: .line(LinearProperties(points: [Point(0, 0), Point(0, 0)])))
-        } else {
+        case .arrow:
+            // Arrows default to an arrowhead on the end.
+            let props = ArrowProperties(points: [Point(0, 0), Point(0, 0)], endArrowhead: .arrow)
+            element = ExcalidrawElement(base: base, kind: .arrow(props))
+        case .freedraw:
+            let props = FreedrawProperties(points: [Point(0, 0)], pressures: [pressure], simulatePressure: false)
+            element = ExcalidrawElement(base: base, kind: .freedraw(props))
+            store.modifyScene { $0.add(element) }
+            selectedIDs = [element.id]
+            interaction = .freehand(id: element.id, origin: origin)
+            return
+        default:
             element = ExcalidrawElement(base: base, kind: kind)
         }
         store.modifyScene { $0.add(element) }
@@ -183,15 +214,53 @@ public final class EditorController {
         interaction = .creating(id: element.id, origin: origin, moved: false)
     }
 
+    private func appendFreehandPoint(id: String, origin: Point, point: Point, pressure: Double) {
+        guard var element = scene.element(id: id), case var .freedraw(props) = element.kind else { return }
+        props.points.append(Point(point.x - origin.x, point.y - origin.y))
+        props.pressures.append(pressure)
+        element.kind = .freedraw(props)
+        let xs = props.points.map(\.x), ys = props.points.map(\.y)
+        element.base.width = (xs.max() ?? 0) - (xs.min() ?? 0)
+        element.base.height = (ys.max() ?? 0) - (ys.min() ?? 0)
+        store.modifyScene { $0.replace(element) }
+    }
+
+    private func finishFreehand(id: String) {
+        if let element = scene.element(id: id), case let .freedraw(props) = element.kind, props.points.count < 2 {
+            // A single dab still counts as a stroke; keep it. Commit either way.
+        }
+        store.commit()
+        if !toolLocked { activeTool = .selection }
+    }
+
+    private func eraseAt(_ point: Point) {
+        let threshold = handleHitRadius(.mouse)
+        let hits = scene.visibleElements.filter {
+            !$0.base.locked && HitTest.hit($0, at: point, threshold: threshold)
+        }
+        guard !hits.isEmpty else { return }
+        store.modifyScene { scene in
+            for hit in hits { _ = scene.remove(id: hit.id) }
+        }
+    }
+
     private func updateCreating(id: String, origin: Point, to point: Point) {
         guard var element = scene.element(id: id) else { return }
+        let endpoint = Point(point.x - origin.x, point.y - origin.y)
         if case var .line(props) = element.kind {
             element.base.x = origin.x
             element.base.y = origin.y
-            element.base.width = abs(point.x - origin.x)
-            element.base.height = abs(point.y - origin.y)
-            props.points = [Point(0, 0), Point(point.x - origin.x, point.y - origin.y)]
+            element.base.width = abs(endpoint.x)
+            element.base.height = abs(endpoint.y)
+            props.points = [Point(0, 0), endpoint]
             element.kind = .line(props)
+        } else if case var .arrow(props) = element.kind {
+            element.base.x = origin.x
+            element.base.y = origin.y
+            element.base.width = abs(endpoint.x)
+            element.base.height = abs(endpoint.y)
+            props.points = [Point(0, 0), endpoint]
+            element.kind = .arrow(props)
         } else {
             element.base.x = Swift.min(origin.x, point.x)
             element.base.y = Swift.min(origin.y, point.y)

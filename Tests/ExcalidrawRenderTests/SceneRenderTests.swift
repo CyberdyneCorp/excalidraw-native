@@ -130,6 +130,30 @@ final class SceneRenderTests: XCTestCase {
         SceneRenderer().render(scene, in: ctx, viewport: Viewport(), size: CGSize(width: w, height: h))
     }
 
+    func testRendersArrowWithHead() {
+        var b = base("a", x: 10, y: 10, w: 100, h: 0)
+        let arrow = ArrowProperties(points: [Point(0, 0), Point(100, 0)], endArrowhead: .triangle)
+        let scene = Scene(elements: [ExcalidrawElement(base: b, kind: .arrow(arrow))])
+        _ = b
+        let (w, h) = (140, 60)
+        let ctx = context(width: w, height: h)
+        SceneRenderer().render(scene, in: ctx, viewport: Viewport(), size: CGSize(width: w, height: h))
+        XCTAssertGreaterThan(inkedCount(ctx, width: w, height: h), 40)
+    }
+
+    func testRendersFreedrawFilledStroke() {
+        var b = base("f", x: 10, y: 10, w: 80, h: 40); b.strokeColor = "#1971c2"
+        let free = FreedrawProperties(
+            points: [Point(0, 0), Point(20, 20), Point(40, 0), Point(60, 30), Point(80, 10)],
+            pressures: [0.5, 0.7, 0.6, 0.8, 0.5], simulatePressure: false
+        )
+        let scene = Scene(elements: [ExcalidrawElement(base: b, kind: .freedraw(free))])
+        let (w, h) = (120, 80)
+        let ctx = context(width: w, height: h)
+        SceneRenderer().render(scene, in: ctx, viewport: Viewport(), size: CGSize(width: w, height: h))
+        XCTAssertGreaterThan(inkedCount(ctx, width: w, height: h), 40)
+    }
+
     func testColorParser() {
         let red = ColorParser.cgColor("#ff0000")!
         XCTAssertEqual(red.components?[0], 1)

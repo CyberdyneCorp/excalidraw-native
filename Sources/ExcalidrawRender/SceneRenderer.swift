@@ -3,6 +3,7 @@ import ExcalidrawGeometry
 import ExcalidrawMath
 import ExcalidrawModel
 import Foundation
+import FreehandKit
 import RoughKit
 
 /// Maps scene coordinates to view coordinates given the current pan/zoom.
@@ -97,10 +98,67 @@ public final class SceneRenderer {
             drawImage(image, base: base, in: ctx, files: files)
         case let .freedraw(props):
             drawFreedraw(props, base: base, in: ctx)
+        case let .arrow(props):
+            if let drawable = shapeCache.drawable(for: element) {
+                drawDrawable(drawable, base: base, in: ctx)
+            }
+            drawArrowheads(props, base: base, in: ctx)
         default:
             if let drawable = shapeCache.drawable(for: element) {
                 drawDrawable(drawable, base: base, in: ctx)
             }
+        }
+    }
+
+    private func drawArrowheads(_ props: ArrowProperties, base: BaseProperties, in ctx: CGContext) {
+        let pts = props.points
+        guard pts.count >= 2 else { return }
+        let stroke = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        if let head = props.endArrowhead {
+            drawArrowhead(
+                at: pts[pts.count - 1], from: pts[pts.count - 2],
+                head: head, base: base, color: stroke, in: ctx
+            )
+        }
+        if let head = props.startArrowhead {
+            drawArrowhead(at: pts[0], from: pts[1], head: head, base: base, color: stroke, in: ctx)
+        }
+    }
+
+    private func drawArrowhead(
+        at tip: Point, from prev: Point, head: Arrowhead, base: BaseProperties, color: CGColor, in ctx: CGContext
+    ) {
+        let dir = Vector(from: tip, origin: prev).normalized() // points toward the tip
+        guard dir.magnitude > 0 else { return }
+        let segLength = tip.distance(to: prev)
+        let size = Swift.min(20, segLength * 0.5) + base.strokeWidth
+        let angle = 25.0 * .pi / 180
+        // Two barbs, rotating the reverse direction by ±angle.
+        let back = Vector(-dir.u, -dir.v)
+        func rotated(_ v: Vector, by a: Double) -> Vector {
+            Vector(v.u * cos(a) - v.v * sin(a), v.u * sin(a) + v.v * cos(a))
+        }
+        let b1 = rotated(back, by: angle).scaled(by: size)
+        let b2 = rotated(back, by: -angle).scaled(by: size)
+        let p1 = Point(tip.x + b1.u, tip.y + b1.v)
+        let p2 = Point(tip.x + b2.u, tip.y + b2.v)
+
+        let filled = head == .triangle || head == .diamond
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: p1.x, y: p1.y))
+        path.addLine(to: CGPoint(x: tip.x, y: tip.y))
+        path.addLine(to: CGPoint(x: p2.x, y: p2.y))
+        if filled { path.closeSubpath() }
+        ctx.addPath(path)
+        if filled {
+            ctx.setFillColor(color)
+            ctx.fillPath()
+        } else {
+            ctx.setStrokeColor(color)
+            ctx.setLineWidth(CGFloat(base.strokeWidth))
+            ctx.setLineCap(.round)
+            ctx.setLineDash(phase: 0, lengths: [])
+            ctx.strokePath()
         }
     }
 
@@ -139,17 +197,21 @@ public final class SceneRenderer {
     }
 
     private func drawFreedraw(_ props: FreedrawProperties, base: BaseProperties, in ctx: CGContext) {
-        guard let first = props.points.first else { return }
+        guard !props.points.isEmpty else { return }
         let strokeColor = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        let inputs = props.points.enumerated().map { index, p in
+            FreehandPoint(x: p.x, y: p.y, pressure: index < props.pressures.count ? props.pressures[index] : 0.5)
+        }
+        let options = FreehandOptions(strokeWidth: base.strokeWidth, simulatePressure: props.simulatePressure)
+        let outline = FreehandKit.strokeOutline(inputs, options: options)
+        guard let first = outline.first, outline.count > 2 else { return }
         let path = CGMutablePath()
         path.move(to: CGPoint(x: first.x, y: first.y))
-        for p in props.points.dropFirst() { path.addLine(to: CGPoint(x: p.x, y: p.y)) }
+        for p in outline.dropFirst() { path.addLine(to: CGPoint(x: p.x, y: p.y)) }
+        path.closeSubpath()
         ctx.addPath(path)
-        ctx.setStrokeColor(strokeColor)
-        ctx.setLineWidth(CGFloat(base.strokeWidth))
-        ctx.setLineCap(.round)
-        ctx.setLineJoin(.round)
-        ctx.strokePath()
+        ctx.setFillColor(strokeColor) // perfect-freehand strokes are filled outlines
+        ctx.fillPath()
     }
 
     private func drawImage(

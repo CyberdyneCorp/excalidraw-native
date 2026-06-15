@@ -163,6 +163,47 @@ final class EditorControllerTests: XCTestCase {
         XCTAssertLessThan(ec.scene.element(id: "r")?.base.x ?? 0, 0)
     }
 
+    func testFreedrawAccumulatesPointsAndPressure() {
+        let ec = makeEditor()
+        ec.setTool(.freedraw)
+        ec.pointerDown(PointerEvent(scenePoint: Point(0, 0), phase: .down, type: .pen, pressure: 0.3))
+        ec.pointerMove(PointerEvent(scenePoint: Point(10, 5), phase: .move, type: .pen, pressure: 0.6))
+        ec.pointerMove(PointerEvent(scenePoint: Point(20, 0), phase: .move, type: .pen, pressure: 0.9))
+        ec.pointerUp(PointerEvent(scenePoint: Point(20, 0), phase: .up, type: .pen, pressure: 0.9))
+
+        guard case let .freedraw(props) = ec.scene.visibleElements.first?.kind else { return XCTFail("freedraw") }
+        XCTAssertEqual(props.points, [Point(0, 0), Point(10, 5), Point(20, 0)])
+        XCTAssertEqual(props.pressures, [0.3, 0.6, 0.9])
+        XCTAssertEqual(ec.activeTool, .selection)
+    }
+
+    func testArrowGetsDefaultEndArrowhead() {
+        let ec = makeEditor()
+        ec.setTool(.arrow)
+        drag(ec, from: Point(0, 0), to: Point(80, 20))
+        guard case let .arrow(props) = ec.scene.visibleElements.first?.kind else { return XCTFail("arrow") }
+        XCTAssertEqual(props.endArrowhead, .arrow)
+        XCTAssertEqual(props.points.last, Point(80, 20))
+    }
+
+    func testEraserDeletesAndUndo() {
+        let ec = makeEditor(Scene(elements: [rect("r", x: 0, y: 0, w: 100, h: 100)]))
+        ec.setTool(.eraser)
+        ec.pointerDown(PointerEvent(scenePoint: Point(50, 50), phase: .down))
+        ec.pointerUp(PointerEvent(scenePoint: Point(50, 50), phase: .up))
+        XCTAssertTrue(ec.scene.visibleElements.isEmpty)
+        XCTAssertTrue(ec.undo())
+        XCTAssertEqual(ec.scene.visibleElements.count, 1)
+    }
+
+    func testHandToolDoesNotCreateOrSelect() {
+        let ec = makeEditor(Scene(elements: [rect("r", x: 0, y: 0, w: 100, h: 100)]))
+        ec.setTool(.hand)
+        drag(ec, from: Point(50, 50), to: Point(80, 80))
+        XCTAssertEqual(ec.scene.visibleElements.count, 1) // unchanged
+        XCTAssertTrue(ec.selectedIDs.isEmpty)
+    }
+
     func testRedoAfterUndo() {
         let ec = makeEditor()
         ec.setTool(.ellipse)
