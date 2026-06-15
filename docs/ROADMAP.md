@@ -37,8 +37,10 @@ Legend: 🎯 milestone deliverable · 🧪 test focus · ⚠️ risk/hard part.
 - ⚠️ rough.js visual fidelity — this phase de-risks the whole project.
 - 🎯 Open a real `.excalidraw` and see it rendered with the correct hand-drawn look.
 
-## Phase 3 — Interaction loop & first tools (the vertical slice closes)
+## Phase 3 — Interaction loop & first tools (the vertical slice closes) ✅
 **Goal:** draw, select, move, resize, rotate, undo, export — end to end.
+
+> **Status: complete.** New pure `ExcalidrawEditor` module: `PointerEvent`, `Tool`, `CurrentItemProperties`, `Transform` (resize/scale/translate/rotate math + handle layout), and the `EditorController` state machine (create-by-drag, select, multi-select box, move, resize via 8 handles, rotation, undo/redo, delete). `ExcalidrawRender` adds `InteractiveRenderer` (selection box + handles + marquee) and `Exporter` (PNG fit-to-content). `ExcalidrawUI` adds `EditorModel` (SwiftUI bridge), `EditorView` (toolbar + canvas + properties bar), and `PointerInputView` (raw `UITouch`: pressure, pencil-vs-finger, palm rejection, two-finger pan/zoom). The app is the editor; the XCUITest draws → exports → undoes on the iOS 17 simulator. **Deferred:** arrow/freedraw/text/image tools and rich properties (Phase 4); rotated-element resize is AABB-approximate; Apple Pencil hover and coalesced-touch freehand (Phase 4/5).
 - Custom `UIViewRepresentable` exposing raw `UITouch` (force, type, coalesced, hover). `PointerController` state machine + `GestureCoordinator` (1-finger action, 2-finger pinch-zoom/pan).
 - Tools: selection, rectangle, diamond, ellipse, line. Drag-to-create; multi-select; transform handles (pointer-type-aware sizes); rotation; move.
 - Interactive overlay Canvas (selection box, handles, snap-to-grid).

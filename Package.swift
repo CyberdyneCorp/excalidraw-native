@@ -19,6 +19,7 @@ let package = Package(
         .library(name: "RoughKit", targets: ["RoughKit"]),
         .library(name: "FreehandKit", targets: ["FreehandKit"]),
         .library(name: "ExcalidrawRender", targets: ["ExcalidrawRender"]),
+        .library(name: "ExcalidrawEditor", targets: ["ExcalidrawEditor"]),
         .library(name: "ExcalidrawUI", targets: ["ExcalidrawUI"]),
     ],
     targets: [
@@ -38,8 +39,14 @@ let package = Package(
             dependencies: ["ExcalidrawModel", "ExcalidrawGeometry", "RoughKit", "FreehandKit"]
         ),
 
+        // MARK: Editor logic (pure, testable — no UIKit)
+        .target(
+            name: "ExcalidrawEditor",
+            dependencies: ["ExcalidrawModel", "ExcalidrawGeometry", "ExcalidrawRender"]
+        ),
+
         // MARK: UI layer
-        .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender"]),
+        .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender", "ExcalidrawEditor"]),
 
         // MARK: Tests (one per library)
         .testTarget(name: "ExcalidrawMathTests", dependencies: ["ExcalidrawMath"]),
@@ -48,6 +55,7 @@ let package = Package(
         .testTarget(name: "RoughKitTests", dependencies: ["RoughKit"]),
         .testTarget(name: "FreehandKitTests", dependencies: ["FreehandKit"]),
         .testTarget(name: "ExcalidrawRenderTests", dependencies: ["ExcalidrawRender"]),
+        .testTarget(name: "ExcalidrawEditorTests", dependencies: ["ExcalidrawEditor"]),
         .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"]),
     ],
     swiftLanguageModes: [.v5]

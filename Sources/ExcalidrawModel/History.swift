@@ -98,6 +98,12 @@ public struct Store: Sendable {
         commit()
     }
 
+    /// Mutate the working scene without recording history. Call `commit()` once
+    /// the interaction settles to capture the net change as a single undo step.
+    public mutating func modifyScene(_ body: (inout Scene) -> Void) {
+        body(&scene)
+    }
+
     /// Capture any changes made to `scene` since the last commit as one undo step.
     public mutating func commit() {
         let delta = SceneDelta.between(snapshot, scene.elements)

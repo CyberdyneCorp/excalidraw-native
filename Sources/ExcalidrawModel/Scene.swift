@@ -61,6 +61,16 @@ public struct Scene: Equatable, Sendable {
         return true
     }
 
+    /// Replace an element in place by id, without bumping its version. Used for
+    /// live interaction updates (drag/resize); the net change is captured when
+    /// the editor commits to history.
+    @discardableResult
+    public mutating func replace(_ element: ExcalidrawElement) -> Bool {
+        guard let i = indexByID[element.id] else { return false }
+        elements[i] = element
+        return true
+    }
+
     /// Soft-delete (Excalidraw keeps deleted elements for history/collab).
     @discardableResult
     public mutating func remove(id: String, timestamp: Int? = nil) -> Bool {
