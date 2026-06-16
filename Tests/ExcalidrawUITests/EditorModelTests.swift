@@ -543,10 +543,15 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(panned?.rect.origin.y ?? .nan, 20, accuracy: 1e-6)
         XCTAssertEqual(panned?.rect.width ?? .nan, 400, accuracy: 1e-6) // scale 1 → unchanged size
 
-        // Zoom to 2×: snapshot scales up.
+        // Zooming IN past the snapshot → nil, so the canvas re-renders crisply.
         m.panZoom(translation: .zero, scale: 2)
-        let zoomed = m.gestureSnapshot(size: CGSize(width: 400, height: 300))
-        XCTAssertEqual(zoomed?.rect.width ?? .nan, 800, accuracy: 1e-6) // 400 × (2/1)
+        XCTAssertNil(m.gestureSnapshot(size: CGSize(width: 400, height: 300)))
+
+        // Zooming OUT keeps using the snapshot (downscale stays crisp + cheap).
+        m.panZoom(translation: .zero, scale: 0.25) // back below the start zoom
+        let zoomedOut = m.gestureSnapshot(size: CGSize(width: 400, height: 300))
+        XCTAssertNotNil(zoomedOut)
+        XCTAssertLessThan(zoomedOut?.rect.width ?? .infinity, 400) // scaled down
 
         m.endViewportGesture()
         XCTAssertFalse(m.isViewportGesturing)

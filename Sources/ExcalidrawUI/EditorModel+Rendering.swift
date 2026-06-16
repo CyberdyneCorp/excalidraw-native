@@ -95,11 +95,18 @@ public extension EditorModel {
     /// snapshot (taken at `gestureViewport`) onto the current viewport, or `nil`
     /// when not gesturing. Drawn via SwiftUI `Image` (orientation-safe); the
     /// canvas's own background shows through any newly revealed area.
+    ///
+    /// Returns `nil` while **zooming in** past the snapshot's resolution, so the
+    /// caller re-renders the scene crisply at the live zoom instead of upscaling
+    /// a bitmap (which would pixelate). Culling keeps that re-render cheap when
+    /// zoomed in. Panning and zooming out keep using the snapshot (a translate /
+    /// downscale stays crisp and is far cheaper than a full repaint).
     func gestureSnapshot(size: CGSize) -> (image: CGImage, rect: CGRect)? {
-        guard isViewportGesturing, size.width > 0, size.height > 0,
-              let image = gestureLayer.image(token: 1, build: {
-                  renderOffscreen(skipping: [], size: size, viewport: gestureViewport)
-              }) else { return nil }
+        guard isViewportGesturing, size.width > 0, size.height > 0 else { return nil }
+        if viewport.zoom > gestureViewport.zoom * 1.01 { return nil }
+        guard let image = gestureLayer.image(token: 1, build: {
+            renderOffscreen(skipping: [], size: size, viewport: gestureViewport)
+        }) else { return nil }
         let scale = viewport.zoom / gestureViewport.zoom
         let offsetX = (viewport.scrollX - gestureViewport.scrollX) * viewport.zoom
         let offsetY = (viewport.scrollY - gestureViewport.scrollY) * viewport.zoom
