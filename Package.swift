@@ -59,7 +59,12 @@ let package = Package(
         .testTarget(name: "ExcalidrawGeometryTests", dependencies: ["ExcalidrawGeometry"]),
         .testTarget(name: "RoughKitTests", dependencies: ["RoughKit"]),
         .testTarget(name: "FreehandKitTests", dependencies: ["FreehandKit"]),
-        .testTarget(name: "ExcalidrawRenderTests", dependencies: ["ExcalidrawRender"]),
+        .testTarget(
+            name: "ExcalidrawRenderTests", dependencies: ["ExcalidrawRender"],
+            // Golden PNGs are read via #filePath, not bundled — keep SwiftPM from
+            // treating them as unhandled resources.
+            exclude: ["Golden"]
+        ),
         .testTarget(name: "ExcalidrawEditorTests", dependencies: ["ExcalidrawEditor"]),
         .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"])
     ],

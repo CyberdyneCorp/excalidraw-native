@@ -102,9 +102,10 @@ Legend: 🎯 milestone deliverable · 🧪 test focus · ⚠️ risk/hard part.
 
 > **Readiness.** The architecture is ready to accept a new renderer backend: `SceneRenderer` is isolated in `ExcalidrawRender`, the model/editor are renderer-agnostic, and `DirtyRegion` + `SceneRenderer.render(clip:)` already exist as groundwork (built in Phase 7, not yet wired into the live canvas). What's missing *before* Metal is profiling data — today's real cost is "repaint the whole scene every frame," not necessarily CoreGraphics rasterization — and a pixel baseline to catch regressions. So this phase front-loads both and treats Metal as the last, gated stage. Each stage is independently shippable; **stop at the first stage that meets the target.**
 
-### Stage A — Measure + safety net (prerequisite)
-- **Benchmark harness:** synthetic heavy scenes (≈500–5000 elements, dense hachure fills, freedraw with thousands of points). Headless timing of `SceneRenderer.render` and of interaction frames (drag/pan/zoom); an on-device ms/FPS overlay.
-- **Golden-image references** (the long-deferred item): commit pixel baselines so any renderer change is diffable within tolerance.
+### Stage A — Measure + safety net (prerequisite) ✅
+> **Status: done.** `RenderBenchmarkTests` times steady-state `SceneRenderer.render` on synthetic grids (prints `BENCH` lines; asserts correctness, not wall-clock, so CI doesn't flake). `GoldenImageTests` diffs three deterministic shapes-only scenes against committed PNG references in `Golden/` (tolerant pixel compare; references excluded from the SwiftPM target and read via `#filePath`). **First numbers (debug build, CPU):** full-scene repaint ≈25 ms (100 elems) → 44 ms (1500 elems); the same 1500-element scene zoomed-in with culling ≈17 ms. Takeaway: cost is dominated by repainting the whole scene every frame — exactly what Stage B targets. (Device-side ms overlay still TODO.)
+- **Benchmark harness:** synthetic heavy scenes; headless timing of `SceneRenderer.render`; an on-device ms/FPS overlay (TODO).
+- **Golden-image references** (the long-deferred item): committed pixel baselines, diffable within tolerance.
 - 🎯 Exit: numbers identifying the real bottleneck + a baseline to diff against. 🧪 perf benchmarks + golden images.
 
 ### Stage B — Layered static/dynamic split (biggest ROI, no Metal)
