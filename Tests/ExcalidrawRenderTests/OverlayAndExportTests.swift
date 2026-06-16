@@ -27,7 +27,7 @@ final class OverlayAndExportTests: XCTestCase {
         let (w, h) = (200, 200)
         let ctx = context(w, h)
         let bounds = BoundingBox(minX: 40, minY: 40, maxX: 120, maxY: 120)
-        let handles = Array(Transform_handles(bounds))
+        let handles = Array(handlePoints(bounds))
         InteractiveRenderer.render(
             selectionBounds: bounds, handles: handles, rotationHandle: Point(80, 10),
             selectionRect: nil, in: ctx, viewport: Viewport()
@@ -46,7 +46,7 @@ final class OverlayAndExportTests: XCTestCase {
         XCTAssertGreaterThan(inked(ctx, w, h), 50)
     }
 
-    func testExportProducesPNG() {
+    func testExportProducesPNG() throws {
         var b = BaseProperties(id: "r"); b.x = 30; b.y = 30; b.width = 100; b.height = 60
         b.backgroundColor = "#ff0000"; b.fillStyle = .solid
         let scene = Scene(elements: [ExcalidrawElement(base: b, kind: .rectangle)])
@@ -54,10 +54,10 @@ final class OverlayAndExportTests: XCTestCase {
         let png = try? XCTUnwrap(data)
         XCTAssertNotNil(png)
         // PNG magic number.
-        XCTAssertEqual(Array(png!.prefix(4)), [0x89, 0x50, 0x4E, 0x47])
+        XCTAssertEqual(try Array(XCTUnwrap(png?.prefix(4))), [0x89, 0x50, 0x4E, 0x47])
 
         // Dimensions = (content + 2*padding) * scale.
-        let image = Exporter.cgImage(scene, options: .init(scale: 2, padding: 10))!
+        let image = try XCTUnwrap(Exporter.cgImage(scene, options: .init(scale: 2, padding: 10)))
         XCTAssertEqual(image.width, Int((100.0 + 20) * 2))
         XCTAssertEqual(image.height, Int((60.0 + 20) * 2))
     }
@@ -66,13 +66,13 @@ final class OverlayAndExportTests: XCTestCase {
         XCTAssertNil(Exporter.pngData(Scene()))
     }
 
-    // Local helper mirroring the editor's handle layout for the overlay test.
-    private func Transform_handles(_ b: BoundingBox) -> [Point] {
+    /// Local helper mirroring the editor's handle layout for the overlay test.
+    private func handlePoints(_ b: BoundingBox) -> [Point] {
         let midX = (b.minX + b.maxX) / 2, midY = (b.minY + b.maxY) / 2
         return [
             Point(b.minX, b.minY), Point(midX, b.minY), Point(b.maxX, b.minY),
             Point(b.maxX, midY), Point(b.maxX, b.maxY), Point(midX, b.maxY),
-            Point(b.minX, b.maxY), Point(b.minX, midY),
+            Point(b.minX, b.maxY), Point(b.minX, midY)
         ]
     }
 }

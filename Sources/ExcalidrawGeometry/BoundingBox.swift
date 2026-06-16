@@ -19,8 +19,13 @@ public struct BoundingBox: Equatable, Sendable {
         self.maxY = maxY
     }
 
-    public var width: Double { maxX - minX }
-    public var height: Double { maxY - minY }
+    public var width: Double {
+        maxX - minX
+    }
+
+    public var height: Double {
+        maxY - minY
+    }
 
     /// Smallest box enclosing a set of points. Returns `nil` for an empty input.
     public init?(points: [Point]) {

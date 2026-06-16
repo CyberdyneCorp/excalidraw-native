@@ -70,7 +70,7 @@ final class EditorControllerTests: XCTestCase {
     func testBoxSelectContainedElements() {
         let scene = Scene(elements: [
             rect("a", x: 10, y: 10, w: 20, h: 20),
-            rect("b", x: 200, y: 200, w: 20, h: 20),
+            rect("b", x: 200, y: 200, w: 20, h: 20)
         ])
         let ec = makeEditor(scene)
         drag(ec, from: Point(0, 0), to: Point(100, 100)) // encloses only "a"
@@ -102,7 +102,7 @@ final class EditorControllerTests: XCTestCase {
     func testToggleMultiSelect() {
         let scene = Scene(elements: [
             rect("a", x: 0, y: 0, w: 40, h: 40),
-            rect("b", x: 100, y: 0, w: 40, h: 40),
+            rect("b", x: 100, y: 0, w: 40, h: 40)
         ])
         let ec = makeEditor(scene)
         drag(ec, from: Point(20, 20), to: Point(20, 20)) // select a

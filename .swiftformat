@@ -10,3 +10,5 @@
 --importgrouping testable-bottom
 --self remove
 --exclude .build,Fixtures
+# Keep braces on the statement line so SwiftLint's `opening_brace` agrees.
+--disable wrapMultilineStatementBraces

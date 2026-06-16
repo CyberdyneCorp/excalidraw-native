@@ -22,19 +22,19 @@ public enum ElementKind: Equatable, Sendable {
     /// The `type` discriminator as written to JSON.
     public var typeName: String {
         switch self {
-        case .selection: return "selection"
-        case .rectangle: return "rectangle"
-        case .diamond: return "diamond"
-        case .ellipse: return "ellipse"
-        case .embeddable: return "embeddable"
-        case .iframe: return "iframe"
-        case .text: return "text"
-        case .freedraw: return "freedraw"
-        case .line: return "line"
-        case .arrow: return "arrow"
-        case .image: return "image"
-        case .frame: return "frame"
-        case .magicframe: return "magicframe"
+        case .selection: "selection"
+        case .rectangle: "rectangle"
+        case .diamond: "diamond"
+        case .ellipse: "ellipse"
+        case .embeddable: "embeddable"
+        case .iframe: "iframe"
+        case .text: "text"
+        case .freedraw: "freedraw"
+        case .line: "line"
+        case .arrow: "arrow"
+        case .image: "image"
+        case .frame: "frame"
+        case .magicframe: "magicframe"
         }
     }
 }

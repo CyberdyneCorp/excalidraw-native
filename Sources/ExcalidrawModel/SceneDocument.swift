@@ -14,6 +14,6 @@ public enum SceneDocument {
     }
 
     public static func decode(_ data: Data) throws -> Scene {
-        Scene(file: Restore.restore(try ExcalidrawFile.decode(from: data)))
+        try Scene(file: Restore.restore(ExcalidrawFile.decode(from: data)))
     }
 }

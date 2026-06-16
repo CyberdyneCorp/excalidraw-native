@@ -3,7 +3,9 @@ import XCTest
 @testable import ExcalidrawRender
 
 final class ThemeTests: XCTestCase {
-    private func rgb(_ c: CGColor) -> [CGFloat] { Array((c.components ?? []).prefix(3)) }
+    private func rgb(_ c: CGColor) -> [CGFloat] {
+        Array((c.components ?? []).prefix(3))
+    }
 
     func testLightThemeIsIdentity() {
         let color = CGColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1)
@@ -16,8 +18,12 @@ final class ThemeTests: XCTestCase {
         let darkenedBlack = rgb(ThemeFilter.apply(black, theme: .dark))
         let darkenedWhite = rgb(ThemeFilter.apply(white, theme: .dark))
         // black -> ~white, white -> ~black.
-        for v in darkenedBlack { XCTAssertEqual(v, 1, accuracy: 0.02) }
-        for v in darkenedWhite { XCTAssertEqual(v, 0, accuracy: 0.02) }
+        for v in darkenedBlack {
+            XCTAssertEqual(v, 1, accuracy: 0.02)
+        }
+        for v in darkenedWhite {
+            XCTAssertEqual(v, 0, accuracy: 0.02)
+        }
     }
 
     func testDarkStaysInGamut() {

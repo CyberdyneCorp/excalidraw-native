@@ -12,9 +12,16 @@ opt_in_rules:
   - empty_count
   - explicit_init
   - first_where
-  - sorted_imports
   - closure_spacing
   - operator_usage_whitespace
+  # NOTE: `sorted_imports` is intentionally NOT enabled — it conflicts with
+  # SwiftFormat's `--importgrouping testable-bottom`, which is the formatter of
+  # record here.
+
+disabled_rules:
+  # Geometry/render return several coordinates as tuples (e.g. [x1,y1,x2,y2,cx,cy]);
+  # named structs would add noise without value.
+  - large_tuple
 
 line_length:
   warning: 120
@@ -28,11 +35,26 @@ identifier_name:
 type_name:
   min_length: 2
 
-# Geometry/render code legitimately gets long; tune as the codebase grows.
+# Geometry/render/editor code legitimately gets large; tune as it grows.
 file_length:
-  warning: 600
+  warning: 700
   error: 1000
+
+type_body_length:
+  warning: 600
+  error: 900
 
 function_body_length:
   warning: 80
   error: 150
+
+# Math/render helpers take several coordinate parameters.
+function_parameter_count:
+  warning: 8
+  error: 10
+
+# Type/element dispatch is implemented with switches, which inflate this metric
+# without real complexity.
+cyclomatic_complexity:
+  warning: 20
+  error: 30

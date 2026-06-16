@@ -39,7 +39,7 @@ public enum CommandRegistry {
         .init(id: "view.zoomIn", title: "Zoom in", command: .zoomIn),
         .init(id: "view.zoomOut", title: "Zoom out", command: .zoomOut),
         .init(id: "view.zoomToFit", title: "Zoom to fit", command: .zoomToFit),
-        .init(id: "view.resetZoom", title: "Reset zoom", command: .resetZoom),
+        .init(id: "view.resetZoom", title: "Reset zoom", command: .resetZoom)
     ]
 
     /// Subsequence (fuzzy) search over command titles. Empty query returns all.

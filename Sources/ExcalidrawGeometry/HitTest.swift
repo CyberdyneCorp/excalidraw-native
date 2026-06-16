@@ -18,9 +18,9 @@ public enum HitTest {
 
         let draggableFromInside =
             (hasBackground(element.kind) && !isTransparent(element.base.backgroundColor))
-            || hasBoundText(element)
-            || isIframeLike(element.kind)
-            || isText(element.kind)
+                || hasBoundText(element)
+                || isIframeLike(element.kind)
+                || isText(element.kind)
 
         switch element.kind {
         case let .line(props):
@@ -95,7 +95,7 @@ public enum HitTest {
         let pts = outline.points.map { $0.rotated(around: center, by: element.base.angle) }
         guard pts.count >= 2 else { return [] }
         var segments: [LineSegment] = []
-        for i in 0..<(pts.count - 1) {
+        for i in 0 ..< (pts.count - 1) {
             segments.append(LineSegment(pts[i], pts[i + 1]))
         }
         if outline.closed, let first = pts.first, let last = pts.last, first != last {
@@ -117,8 +117,8 @@ public enum HitTest {
 
     private static func hasBackground(_ kind: ElementKind) -> Bool {
         switch kind {
-        case .rectangle, .iframe, .embeddable, .ellipse, .diamond, .line, .freedraw: return true
-        default: return false
+        case .rectangle, .iframe, .embeddable, .ellipse, .diamond, .line, .freedraw: true
+        default: false
         }
     }
 
@@ -134,8 +134,8 @@ public enum HitTest {
 
     private static func isIframeLike(_ kind: ElementKind) -> Bool {
         switch kind {
-        case .iframe, .embeddable: return true
-        default: return false
+        case .iframe, .embeddable: true
+        default: false
         }
     }
 

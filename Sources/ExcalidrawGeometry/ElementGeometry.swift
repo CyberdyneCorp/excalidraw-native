@@ -19,8 +19,14 @@ public enum ElementGeometry {
         if let pts = scenePoints(element), !pts.isEmpty,
            case let kind = element.kind, isPolylineKind(kind) {
             let box = BoundingBox(points: pts)!
-            return (box.minX, box.minY, box.maxX, box.maxY,
-                    (box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2)
+            return (
+                box.minX,
+                box.minY,
+                box.maxX,
+                box.maxY,
+                (box.minX + box.maxX) / 2,
+                (box.minY + box.maxY) / 2
+            )
         }
         let x1 = base.x, y1 = base.y
         let x2 = base.x + base.width, y2 = base.y + base.height
@@ -119,8 +125,8 @@ public enum ElementGeometry {
 
     private static func isPolylineKind(_ kind: ElementKind) -> Bool {
         switch kind {
-        case .freedraw, .line, .arrow: return true
-        default: return false
+        case .freedraw, .line, .arrow: true
+        default: false
         }
     }
 

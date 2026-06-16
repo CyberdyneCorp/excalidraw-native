@@ -26,7 +26,9 @@ public struct SceneDelta: Equatable, Sendable {
         self.changes = changes
     }
 
-    public var isEmpty: Bool { changes.isEmpty }
+    public var isEmpty: Bool {
+        changes.isEmpty
+    }
 
     /// Diff `old` → `new`, recording only elements that actually changed.
     public static func between(_ old: [ExcalidrawElement], _ new: [ExcalidrawElement]) -> SceneDelta {
@@ -52,8 +54,13 @@ public struct History: Sendable {
 
     public init() {}
 
-    public var canUndo: Bool { !undoStack.isEmpty }
-    public var canRedo: Bool { !redoStack.isEmpty }
+    public var canUndo: Bool {
+        !undoStack.isEmpty
+    }
+
+    public var canRedo: Bool {
+        !redoStack.isEmpty
+    }
 
     /// Record a new change, clearing the redo stack (a fresh edit branches history).
     public mutating func record(_ delta: SceneDelta) {
@@ -89,8 +96,13 @@ public struct Store: Sendable {
         snapshot = scene.elements
     }
 
-    public var canUndo: Bool { history.canUndo }
-    public var canRedo: Bool { history.canRedo }
+    public var canUndo: Bool {
+        history.canUndo
+    }
+
+    public var canRedo: Bool {
+        history.canRedo
+    }
 
     /// Mutate the scene in a closure and capture the change as one undo step.
     public mutating func transaction(_ body: (inout Scene) -> Void) {

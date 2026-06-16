@@ -26,10 +26,14 @@ public struct DeviceClass: Sendable, Equatable {
         return .desktop
     }
 
-    public var isLandscape: Bool { width > height }
+    public var isLandscape: Bool {
+        width > height
+    }
 
     /// iPhone-style compact UI (bottom toolbar, full-screen sheets).
-    public var usesCompactLayout: Bool { formFactor == .phone }
+    public var usesCompactLayout: Bool {
+        formFactor == .phone
+    }
 
     /// Whether a docked side panel fits (iPad landscape / desktop).
     public var canDockSidebar: Bool {

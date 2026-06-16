@@ -6,8 +6,8 @@ public enum Angle {
     /// Wrap an angle into `[0, 2π)` (`normalizeRadians`).
     public static func normalizeRadians(_ angle: Double) -> Double {
         let twoPi = 2 * Double.pi
-        return angle < 0 ? (angle.truncatingRemainder(dividingBy: twoPi)) + twoPi
-            : angle.truncatingRemainder(dividingBy: twoPi)
+        let remainder = angle.truncatingRemainder(dividingBy: twoPi)
+        return angle < 0 ? remainder + twoPi : remainder
     }
 
     public static func degreesToRadians(_ degrees: Double) -> Double {

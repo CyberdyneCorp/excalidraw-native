@@ -21,7 +21,7 @@ final class PointTests: XCTestCase {
 
     func testEncodesAsJSONArray() throws {
         let data = try JSONEncoder().encode(Point(1.5, -2))
-        XCTAssertEqual(String(decoding: data, as: UTF8.self), "[1.5,-2]")
+        XCTAssertEqual(String(bytes: data, encoding: .utf8), "[1.5,-2]")
     }
 
     func testDecodesFromJSONArray() throws {

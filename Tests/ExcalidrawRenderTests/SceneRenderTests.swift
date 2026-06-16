@@ -30,7 +30,7 @@ final class SceneRenderTests: XCTestCase {
         let scene = Scene(elements: [
             ExcalidrawElement(base: rect, kind: .rectangle),
             ExcalidrawElement(base: ell, kind: .ellipse),
-            ExcalidrawElement(base: text, kind: .text(TextProperties(text: "Hello", originalText: "Hello"))),
+            ExcalidrawElement(base: text, kind: .text(TextProperties(text: "Hello", originalText: "Hello")))
         ])
 
         let (w, h) = (400, 240)
@@ -82,7 +82,9 @@ final class SceneRenderTests: XCTestCase {
         SceneRenderer().render(s, in: ctx, viewport: Viewport(), size: CGSize(width: w, height: h))
         let (px, total) = rgb(ctx, width: w, height: h)
         var nonWhite = 0
-        for i in stride(from: 0, to: total, by: 4) where px[i] < 255 { nonWhite += 1 }
+        for i in stride(from: 0, to: total, by: 4) where px[i] < 255 {
+            nonWhite += 1
+        }
         XCTAssertGreaterThan(nonWhite, 0, "grid lines should be drawn")
     }
 
@@ -103,7 +105,7 @@ final class SceneRenderTests: XCTestCase {
         dashed.angle = .pi / 6 // exercises the rotation branch
         let scene = Scene(elements: [
             ExcalidrawElement(base: free, kind: .freedraw(freeProps)),
-            ExcalidrawElement(base: dashed, kind: .rectangle),
+            ExcalidrawElement(base: dashed, kind: .rectangle)
         ])
         let (w, h) = (220, 120)
         let ctx = context(width: w, height: h)
@@ -154,13 +156,13 @@ final class SceneRenderTests: XCTestCase {
         XCTAssertGreaterThan(inkedCount(ctx, width: w, height: h), 40)
     }
 
-    func testColorParser() {
-        let red = ColorParser.cgColor("#ff0000")!
+    func testColorParser() throws {
+        let red = try XCTUnwrap(ColorParser.cgColor("#ff0000"))
         XCTAssertEqual(red.components?[0], 1)
         XCTAssertEqual(red.components?[1], 0)
-        let short = ColorParser.cgColor("#fff")!
+        let short = try XCTUnwrap(ColorParser.cgColor("#fff"))
         XCTAssertEqual(short.components?[0], 1)
-        let alpha = ColorParser.cgColor("#ff000080")!
+        let alpha = try XCTUnwrap(ColorParser.cgColor("#ff000080"))
         XCTAssertEqual(alpha.alpha, CGFloat(128) / 255, accuracy: 0.01)
         XCTAssertEqual(ColorParser.cgColor("transparent")?.alpha, 0)
         XCTAssertTrue(ColorParser.isTransparent("#ff000000"))

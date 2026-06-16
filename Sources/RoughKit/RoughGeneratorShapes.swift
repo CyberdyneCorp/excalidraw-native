@@ -49,7 +49,7 @@ public extension RoughGenerator {
         let s1x = first.x + jitter(offsetAmount, o, &rng)
         let s1y = first.y + jitter(offsetAmount, o, &rng)
         ps.append(Point(s1x, s1y))
-        for i in 1..<points.count {
+        for i in 1 ..< points.count {
             let px = points[i].x + jitter(offsetAmount, o, &rng)
             let py = points[i].y + jitter(offsetAmount, o, &rng)
             ps.append(Point(px, py))

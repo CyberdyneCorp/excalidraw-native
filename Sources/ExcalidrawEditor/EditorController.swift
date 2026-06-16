@@ -45,9 +45,17 @@ public final class EditorController {
         nextSeed = seedProvider ?? { seedCounter += 1; return seedCounter * 100_001 }
     }
 
-    public var scene: Scene { store.scene }
-    public var canUndo: Bool { store.canUndo }
-    public var canRedo: Bool { store.canRedo }
+    public var scene: Scene {
+        store.scene
+    }
+
+    public var canUndo: Bool {
+        store.canUndo
+    }
+
+    public var canRedo: Bool {
+        store.canRedo
+    }
 
     public var selectedElements: [ExcalidrawElement] {
         scene.visibleElements.filter { selectedIDs.contains($0.id) }
@@ -163,14 +171,24 @@ public final class EditorController {
         interaction = .idle
     }
 
-    public func setTool(_ tool: Tool) { activeTool = tool }
-    public func selectAll() { selectedIDs = Set(scene.visibleElements.map(\.id)) }
-    public func clearSelection() { selectedIDs = [] }
+    public func setTool(_ tool: Tool) {
+        activeTool = tool
+    }
+
+    public func selectAll() {
+        selectedIDs = Set(scene.visibleElements.map(\.id))
+    }
+
+    public func clearSelection() {
+        selectedIDs = []
+    }
 
     public func deleteSelected() {
         guard !selectedIDs.isEmpty else { return }
         store.transaction { scene in
-            for id in selectedIDs { scene.remove(id: id) }
+            for id in selectedIDs {
+                scene.remove(id: id)
+            }
         }
         selectedIDs = []
     }
@@ -253,7 +271,9 @@ public final class EditorController {
         }
         guard !hits.isEmpty else { return }
         store.modifyScene { scene in
-            for hit in hits { _ = scene.remove(id: hit.id) }
+            for hit in hits {
+                _ = scene.remove(id: hit.id)
+            }
         }
     }
 
@@ -309,8 +329,10 @@ public final class EditorController {
                 where position.distance(to: point) <= handleHitRadius(event.type) {
                 let originals = snapshotSelected()
                 interaction = handle == .rotation
-                    ? .rotating(center: Point((bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2),
-                                originals: originals)
+                    ? .rotating(
+                        center: Point((bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2),
+                        originals: originals
+                    )
                     : .resizing(handle: handle, bounds: bounds, originals: originals)
                 return
             }
@@ -357,16 +379,17 @@ public final class EditorController {
     }
 
     private func handleHitRadius(_ type: PointerType) -> Double {
-        let px: Double
-        switch type {
-        case .touch: px = 28
-        case .pen: px = 16
-        case .mouse: px = 10
+        let px: Double = switch type {
+        case .touch: 28
+        case .pen: 16
+        case .mouse: 10
         }
         return px / zoom
     }
 
-    private var rotationOffset: Double { 30 / zoom }
+    private var rotationOffset: Double {
+        30 / zoom
+    }
 
     /// Normalized bounding box of two corner points.
     private static func bbox(_ a: Point, _ b: Point) -> BoundingBox {
@@ -435,7 +458,9 @@ public final class EditorController {
                 scene.add(copy)
                 newIDs.append(copy.id)
             }
-            for (id, file) in file.files { scene.files[id] = file }
+            for (id, file) in file.files {
+                scene.files[id] = file
+            }
         }
         selectedIDs = Set(newIDs)
     }
@@ -538,7 +563,7 @@ public final class EditorController {
                     elements.swapAt(i, i + 1)
                 }
             case .backward:
-                for i in 1..<elements.count
+                for i in 1 ..< elements.count
                     where selected.contains(elements[i].id) && !selected.contains(elements[i - 1].id) {
                     elements.swapAt(i, i - 1)
                 }

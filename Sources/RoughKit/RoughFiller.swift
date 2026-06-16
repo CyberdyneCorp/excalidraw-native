@@ -28,7 +28,7 @@ public extension RoughGenerator {
         var ops: [PathOp] = []
         for poly in polygons where poly.count > 2 {
             ops.append(.move(poly[0]))
-            for i in 1..<poly.count {
+            for i in 1 ..< poly.count {
                 ops.append(.lineTo(poly[i]))
             }
             ops.append(.lineTo(poly[0])) // close
@@ -57,7 +57,7 @@ public extension RoughGenerator {
         let lines = hachureLines(polygons, gap: hachureGap(o), angleDegrees: o.hachureAngle + 90)
         // Connect consecutive scanline segments into a single zigzag stroke.
         var connected: [(Point, Point)] = []
-        for i in 0..<lines.count {
+        for i in 0 ..< lines.count {
             connected.append(lines[i])
             if i + 1 < lines.count {
                 connected.append((lines[i].1, lines[i + 1].0))
@@ -115,7 +115,7 @@ public extension RoughGenerator {
         while y < maxY {
             var crossings: [Double] = []
             for ring in rings {
-                for i in 1..<ring.count {
+                for i in 1 ..< ring.count {
                     let p1 = ring[i - 1], p2 = ring[i]
                     if (p1.y < y && p2.y >= y) || (p2.y < y && p1.y >= y) {
                         let t = (y - p1.y) / (p2.y - p1.y)

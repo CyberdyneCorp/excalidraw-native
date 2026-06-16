@@ -1,16 +1,16 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Layered package graph for the Excalidraw → SwiftUI port.
-// Pure-logic libraries build on both iOS and macOS so they are testable via
-// `swift test` on the CI host without a simulator. UI/render layers are kept
-// cross-platform for now (CoreGraphics/SwiftUI), with UIKit-only code guarded
-// behind `#if canImport(UIKit)` as it lands.
+/// Layered package graph for the Excalidraw → SwiftUI port.
+/// Pure-logic libraries build on both iOS and macOS so they are testable via
+/// `swift test` on the CI host without a simulator. UI/render layers are kept
+/// cross-platform for now (CoreGraphics/SwiftUI), with UIKit-only code guarded
+/// behind `#if canImport(UIKit)` as it lands.
 let package = Package(
     name: "ExcalidrawSwift",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14),
+        .macOS(.v14)
     ],
     products: [
         .library(name: "ExcalidrawMath", targets: ["ExcalidrawMath"]),
@@ -20,10 +20,11 @@ let package = Package(
         .library(name: "FreehandKit", targets: ["FreehandKit"]),
         .library(name: "ExcalidrawRender", targets: ["ExcalidrawRender"]),
         .library(name: "ExcalidrawEditor", targets: ["ExcalidrawEditor"]),
-        .library(name: "ExcalidrawUI", targets: ["ExcalidrawUI"]),
+        .library(name: "ExcalidrawUI", targets: ["ExcalidrawUI"])
     ],
     targets: [
         // MARK: Domain core
+
         .target(name: "ExcalidrawMath"),
         .target(name: "ExcalidrawModel", dependencies: ["ExcalidrawMath"]),
         .target(
@@ -32,6 +33,7 @@ let package = Package(
         ),
 
         // MARK: Render building blocks
+
         .target(name: "RoughKit", dependencies: ["ExcalidrawMath"]),
         .target(name: "FreehandKit", dependencies: ["ExcalidrawMath"]),
         .target(
@@ -40,15 +42,18 @@ let package = Package(
         ),
 
         // MARK: Editor logic (pure, testable — no UIKit)
+
         .target(
             name: "ExcalidrawEditor",
             dependencies: ["ExcalidrawModel", "ExcalidrawGeometry", "ExcalidrawRender"]
         ),
 
         // MARK: UI layer
+
         .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender", "ExcalidrawEditor"]),
 
         // MARK: Tests (one per library)
+
         .testTarget(name: "ExcalidrawMathTests", dependencies: ["ExcalidrawMath"]),
         .testTarget(name: "ExcalidrawModelTests", dependencies: ["ExcalidrawModel"]),
         .testTarget(name: "ExcalidrawGeometryTests", dependencies: ["ExcalidrawGeometry"]),
@@ -56,7 +61,7 @@ let package = Package(
         .testTarget(name: "FreehandKitTests", dependencies: ["FreehandKit"]),
         .testTarget(name: "ExcalidrawRenderTests", dependencies: ["ExcalidrawRender"]),
         .testTarget(name: "ExcalidrawEditorTests", dependencies: ["ExcalidrawEditor"]),
-        .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"]),
+        .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"])
     ],
     swiftLanguageModes: [.v5]
 )

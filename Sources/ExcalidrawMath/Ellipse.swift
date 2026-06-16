@@ -36,7 +36,7 @@ public struct Ellipse: Equatable, Sendable {
 
         var tx = 0.707
         var ty = 0.707
-        for _ in 0..<3 {
+        for _ in 0 ..< 3 {
             let x = a * tx
             let y = b * ty
             let ex = (a * a - b * b) * (tx * tx * tx) / a
@@ -105,7 +105,7 @@ public struct Ellipse: Equatable, Sendable {
         let t2 = (-b - disc.squareRoot()) / (2 * a)
         let candidates = [
             Point(x1 + t1 * (x2 - x1) + center.x, y1 + t1 * (y2 - y1) + center.y),
-            Point(x1 + t2 * (x2 - x1) + center.x, y1 + t2 * (y2 - y1) + center.y),
+            Point(x1 + t2 * (x2 - x1) + center.x, y1 + t2 * (y2 - y1) + center.y)
         ].filter { !$0.x.isNaN && !$0.y.isNaN }
 
         if candidates.count == 2, candidates[0].isApproximatelyEqual(to: candidates[1]) {

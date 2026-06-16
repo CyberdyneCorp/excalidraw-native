@@ -38,7 +38,7 @@ public struct Viewport: Equatable, Sendable {
 }
 
 public enum ExcalidrawRender {
-    public static let zoomRange: ClosedRange<Double> = 0.1...30
+    public static let zoomRange: ClosedRange<Double> = 0.1 ... 30
 }
 
 /// Renders a scene's static content (background, grid, elements) into a
@@ -66,11 +66,10 @@ public final class SceneRenderer {
         self.theme = theme
         // Background: a user-set colour is theme-filtered (white→dark); the
         // default canvas colour is used directly so it isn't double-inverted.
-        let background: CGColor
-        if let userBackground = scene.appState.viewBackgroundColor {
-            background = themed(userBackground)
+        let background: CGColor = if let userBackground = scene.appState.viewBackgroundColor {
+            themed(userBackground)
         } else {
-            background = ColorParser.cgColor(theme == .dark ? "#121212" : "#ffffff")
+            ColorParser.cgColor(theme == .dark ? "#121212" : "#ffffff")
                 ?? CGColor(red: 1, green: 1, blue: 1, alpha: 1)
         }
         ctx.setFillColor(background)
@@ -222,7 +221,9 @@ public final class SceneRenderer {
         guard let first = outline.first, outline.count > 2 else { return }
         let path = CGMutablePath()
         path.move(to: CGPoint(x: first.x, y: first.y))
-        for p in outline.dropFirst() { path.addLine(to: CGPoint(x: p.x, y: p.y)) }
+        for p in outline.dropFirst() {
+            path.addLine(to: CGPoint(x: p.x, y: p.y))
+        }
         path.closeSubpath()
         ctx.addPath(path)
         ctx.setFillColor(strokeColor) // perfect-freehand strokes are filled outlines

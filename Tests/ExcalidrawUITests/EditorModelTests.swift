@@ -113,9 +113,9 @@ final class EditorModelTests: XCTestCase {
         XCTAssertTrue(m.controller.scene.visibleElements.isEmpty)
     }
 
-    func testInsertImage() {
+    func testInsertImage() throws {
         let payload = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        let data = Data(base64Encoded: payload)!
+        let data = try XCTUnwrap(Data(base64Encoded: payload))
         let m = EditorModel()
         m.insertImage(data: data, mimeType: "image/png", viewSize: CGSize(width: 400, height: 400))
         XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
@@ -174,7 +174,7 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
     }
 
-    func testDocumentSaveLoadRoundTrip() {
+    func testDocumentSaveLoadRoundTrip() throws {
         let m = EditorModel()
         m.select(tool: .rectangle)
         draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 60, y: 40))
@@ -182,7 +182,7 @@ final class EditorModelTests: XCTestCase {
         XCTAssertNotNil(data)
 
         let m2 = EditorModel()
-        m2.loadDocument(data!)
+        try m2.loadDocument(XCTUnwrap(data))
         XCTAssertEqual(m2.controller.scene.visibleElements.count, 1)
     }
 

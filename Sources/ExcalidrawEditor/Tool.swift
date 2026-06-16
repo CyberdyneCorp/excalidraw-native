@@ -17,15 +17,17 @@ public enum Tool: String, Sendable, CaseIterable {
     /// The element kind a shape tool creates, or `nil` for non-creating tools.
     var elementKind: ElementKind? {
         switch self {
-        case .rectangle: return .rectangle
-        case .diamond: return .diamond
-        case .ellipse: return .ellipse
-        case .line: return .line(LinearProperties())
-        case .arrow: return .arrow(ArrowProperties())
-        case .freedraw: return .freedraw(FreedrawProperties())
-        case .selection, .eraser, .hand, .text: return nil
+        case .rectangle: .rectangle
+        case .diamond: .diamond
+        case .ellipse: .ellipse
+        case .line: .line(LinearProperties())
+        case .arrow: .arrow(ArrowProperties())
+        case .freedraw: .freedraw(FreedrawProperties())
+        case .selection, .eraser, .hand, .text: nil
         }
     }
 
-    var isShape: Bool { elementKind != nil }
+    var isShape: Bool {
+        elementKind != nil
+    }
 }

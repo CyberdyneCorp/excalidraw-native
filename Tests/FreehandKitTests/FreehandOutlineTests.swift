@@ -4,7 +4,7 @@ import XCTest
 
 final class FreehandOutlineTests: XCTestCase {
     private func line(_ count: Int, pressure: Double, dx: Double = 10) -> [FreehandPoint] {
-        (0..<count).map { FreehandPoint(x: Double($0) * dx, y: 0, pressure: pressure) }
+        (0 ..< count).map { FreehandPoint(x: Double($0) * dx, y: 0, pressure: pressure) }
     }
 
     private func bounds(_ pts: [Point]) -> (minX: Double, maxX: Double, minY: Double, maxY: Double) {
@@ -41,17 +41,19 @@ final class FreehandOutlineTests: XCTestCase {
         var opts = FreehandOptions(); opts.simulatePressure = false
         let thin = FreehandKit.strokeOutline(line(10, pressure: 0.2), options: opts)
         let thick = FreehandKit.strokeOutline(line(10, pressure: 0.9), options: opts)
-        func thickness(_ pts: [Point]) -> Double { let b = bounds(pts); return b.maxY - b.minY }
+        func thickness(_ pts: [Point]) -> Double {
+            let b = bounds(pts); return b.maxY - b.minY
+        }
         XCTAssertGreaterThan(thickness(thick), thickness(thin))
     }
 
-    func testStrokePointsStreamlineReducesPoints() {
+    func testStrokePointsStreamlineReducesPoints() throws {
         // With streamline, the stroke points are smoothed; running length grows.
         let sps = FreehandKit.strokePoints(line(20, pressure: 0.5), options: FreehandOptions())
         XCTAssertGreaterThan(sps.count, 1)
-        XCTAssertGreaterThan(sps.last!.runningLength, 0)
+        XCTAssertGreaterThan(try XCTUnwrap(sps.last?.runningLength), 0)
         // Running length is monotonic.
-        for i in 1..<sps.count {
+        for i in 1 ..< sps.count {
             XCTAssertGreaterThanOrEqual(sps[i].runningLength, sps[i - 1].runningLength)
         }
     }

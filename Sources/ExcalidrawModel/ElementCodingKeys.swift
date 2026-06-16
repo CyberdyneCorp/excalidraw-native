@@ -18,12 +18,12 @@ enum ElementCodingKeys: String, CodingKey {
     case points, startBinding, endBinding, startArrowhead, endArrowhead
     case polygon, elbowed, fixedSegments, startIsSpecial, endIsSpecial
 
-    // Freedraw
+    /// Freedraw
     case pressures, simulatePressure
 
-    // Image
+    /// Image
     case fileId, status, scale, crop
 
-    // Frame / magicframe
+    /// Frame / magicframe
     case name
 }

@@ -25,7 +25,7 @@ public struct Rectangle: Equatable, Sendable {
             LineSegment(topLeft, topRight),
             LineSegment(topRight, bottomRight),
             LineSegment(bottomRight, bottomLeft),
-            LineSegment(bottomLeft, topLeft),
+            LineSegment(bottomLeft, topLeft)
         ]
         return edges.compactMap { segment.lineIntersection(with: $0) }
     }

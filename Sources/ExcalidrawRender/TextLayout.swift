@@ -9,7 +9,7 @@ import Foundation
 /// metric parity are Phase 4 work; this uses a system fallback font.
 public enum TextLayout {
     public static func draw(
-        _ text: TextProperties, base: BaseProperties, in ctx: CGContext, color: CGColor
+        _ text: TextProperties, base _: BaseProperties, in ctx: CGContext, color: CGColor
     ) {
         let font = CTFontCreateWithName(fontName(for: text.fontFamily) as CFString, text.fontSize, nil)
         let ascent = CTFontGetAscent(font)
@@ -20,7 +20,7 @@ public enum TextLayout {
             // Use Core Text attribute keys so this compiles without UIKit/AppKit.
             let attributes: [NSAttributedString.Key: Any] = [
                 NSAttributedString.Key(kCTFontAttributeName as String): font,
-                NSAttributedString.Key(kCTForegroundColorAttributeName as String): color,
+                NSAttributedString.Key(kCTForegroundColorAttributeName as String): color
             ]
             let attributed = NSAttributedString(string: lineText, attributes: attributes)
             let ctLine = CTLineCreateWithAttributedString(attributed)
@@ -40,9 +40,9 @@ public enum TextLayout {
     /// Excalifont/Virgil/etc. arrive in Phase 4.
     static func fontName(for family: Int) -> String {
         switch family {
-        case FontFamily.helvetica, FontFamily.liberationSans: return "Helvetica"
-        case FontFamily.cascadia, FontFamily.comicShanns: return "Menlo"
-        default: return "Helvetica" // hand-drawn families fall back for now
+        case FontFamily.helvetica, FontFamily.liberationSans: "Helvetica"
+        case FontFamily.cascadia, FontFamily.comicShanns: "Menlo"
+        default: "Helvetica" // hand-drawn families fall back for now
         }
     }
 }

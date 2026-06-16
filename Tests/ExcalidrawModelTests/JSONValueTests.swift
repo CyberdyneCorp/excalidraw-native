@@ -14,7 +14,7 @@ final class JSONValueTests: XCTestCase {
             "num": .number(3.5),
             "s": .string("hi"),
             "arr": .array([.number(1), .string("two"), .bool(true), .null]),
-            "obj": .object(["k": .string("v")]),
+            "obj": .object(["k": .string("v")])
         ])
         XCTAssertEqual(try roundTrip(nested), nested)
     }

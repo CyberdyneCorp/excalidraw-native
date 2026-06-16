@@ -18,7 +18,7 @@ public struct EditorView: View {
     private let tools: [(Tool, String)] = [
         (.selection, "cursorarrow"), (.rectangle, "rectangle"), (.diamond, "diamond"),
         (.ellipse, "circle"), (.arrow, "arrow.up.right"), (.line, "line.diagonal"),
-        (.freedraw, "scribble"), (.text, "textformat"), (.eraser, "eraser"), (.hand, "hand.draw"),
+        (.freedraw, "scribble"), (.text, "textformat"), (.eraser, "eraser"), (.hand, "hand.draw")
     ]
     private let palette = ["#1e1e1e", "#e03131", "#2f9e44", "#1971c2", "#f08c00"]
     private let fills = ["transparent", "#ffc9c9", "#b2f2bb", "#a5d8ff", "#ffec99"]
@@ -27,7 +27,9 @@ public struct EditorView: View {
         _model = StateObject(wrappedValue: EditorModel(scene: scene, viewport: viewport))
     }
 
-    private var isCompact: Bool { sizeClass == .compact }
+    private var isCompact: Bool {
+        sizeClass == .compact
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -88,8 +90,13 @@ public struct EditorView: View {
             Canvas { context, size in
                 _ = model.revision
                 context.withCGContext { cg in
-                    model.renderer.render(model.controller.scene, in: cg, viewport: model.viewport,
-                                          size: size, theme: model.theme)
+                    model.renderer.render(
+                        model.controller.scene,
+                        in: cg,
+                        viewport: model.viewport,
+                        size: size,
+                        theme: model.theme
+                    )
                     let handles = model.controller.transformHandles()
                     InteractiveRenderer.render(
                         selectionBounds: model.controller.selectionBounds,
@@ -118,17 +125,17 @@ public struct EditorView: View {
     @ViewBuilder
     private var inputLayer: some View {
         #if canImport(UIKit)
-        PointerInputView(model: model)
+            PointerInputView(model: model)
         #else
-        Color.clear.contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { v in
-                        if v.translation == .zero { model.pointer(.down, at: v.startLocation) }
-                        model.pointer(.move, at: v.location)
-                    }
-                    .onEnded { v in model.pointer(.up, at: v.location) }
-            )
+            Color.clear.contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { v in
+                            if v.translation == .zero { model.pointer(.down, at: v.startLocation) }
+                            model.pointer(.move, at: v.location)
+                        }
+                        .onEnded { v in model.pointer(.up, at: v.location) }
+                )
         #endif
     }
 
@@ -171,7 +178,7 @@ public struct EditorView: View {
                 Divider().frame(height: 24)
                 Stepper("W \(Int(model.strokeWidth))", value: Binding(
                     get: { model.strokeWidth }, set: { model.setStrokeWidth($0) }
-                ), in: 1...20).fixedSize()
+                ), in: 1 ... 20).fixedSize()
                 if exported {
                     Text("Exported").foregroundStyle(.secondary).accessibilityIdentifier("exported-confirmation")
                 }
@@ -221,8 +228,10 @@ public struct EditorView: View {
                 Button { action(color) } label: {
                     Circle().fill(color == "transparent" ? Color.white : Color(hex: color))
                         .frame(width: 20, height: 20)
-                        .overlay(Circle().stroke(selected == color ? Color.accentColor : .gray.opacity(0.3),
-                                                 lineWidth: selected == color ? 2 : 1))
+                        .overlay(Circle().stroke(
+                            selected == color ? Color.accentColor : .gray.opacity(0.3),
+                            lineWidth: selected == color ? 2 : 1
+                        ))
                 }
                 .accessibilityIdentifier("\(id)-\(color)")
             }

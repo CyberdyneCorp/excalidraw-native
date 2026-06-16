@@ -97,7 +97,9 @@ public enum SVGExporter {
         let outline = FreehandKit.strokeOutline(inputs, options: options)
         guard let first = outline.first, outline.count > 2 else { return "" }
         var d = "M \(fmt(first.x)) \(fmt(first.y)) "
-        for p in outline.dropFirst() { d += "L \(fmt(p.x)) \(fmt(p.y)) " }
+        for p in outline.dropFirst() {
+            d += "L \(fmt(p.x)) \(fmt(p.y)) "
+        }
         d += "Z"
         return #"<path d="\#(d)" fill="\#(escape(base.strokeColor))" stroke="none"/>"#
     }

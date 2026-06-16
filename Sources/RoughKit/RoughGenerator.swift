@@ -59,7 +59,7 @@ public struct RoughGenerator: Sendable {
             return doubleLine(points[0].x, points[0].y, points[1].x, points[1].y, o, filling: false, &rng)
         }
         var ops: [PathOp] = []
-        for i in 0..<(len - 1) {
+        for i in 0 ..< (len - 1) {
             ops += doubleLine(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, o, filling: false, &rng)
         }
         if close {
@@ -79,7 +79,6 @@ public struct RoughGenerator: Sendable {
         return o1 + o2
     }
 
-    // swiftlint:disable:next function_parameter_count
     func line(
         _ x1: Double, _ y1: Double, _ x2: Double, _ y2: Double,
         _ o: RoughOptions, move: Bool, overlay: Bool, _ rng: inout SeededRandom
@@ -87,13 +86,12 @@ public struct RoughGenerator: Sendable {
         let lengthSq = pow(x1 - x2, 2) + pow(y1 - y2, 2)
         let length = lengthSq.squareRoot()
 
-        let roughnessGain: Double
-        if length < 200 {
-            roughnessGain = 1
+        let roughnessGain: Double = if length < 200 {
+            1
         } else if length > 500 {
-            roughnessGain = 0.4
+            0.4
         } else {
-            roughnessGain = -0.0016668 * length + 1.233334
+            -0.0016668 * length + 1.233334
         }
 
         var offsetValue = o.maxRandomnessOffset
@@ -109,8 +107,12 @@ public struct RoughGenerator: Sendable {
         midDispY = offsetOpt(midDispY, o, roughnessGain, &rng)
 
         let preserve = o.preserveVertices
-        func randomHalf(_ rng: inout SeededRandom) -> Double { offsetOpt(halfOffset, o, roughnessGain, &rng) }
-        func randomFull(_ rng: inout SeededRandom) -> Double { offsetOpt(offsetValue, o, roughnessGain, &rng) }
+        func randomHalf(_ rng: inout SeededRandom) -> Double {
+            offsetOpt(halfOffset, o, roughnessGain, &rng)
+        }
+        func randomFull(_ rng: inout SeededRandom) -> Double {
+            offsetOpt(offsetValue, o, roughnessGain, &rng)
+        }
 
         var ops: [PathOp] = []
         if move {

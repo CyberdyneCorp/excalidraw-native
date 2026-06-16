@@ -8,18 +8,18 @@ final class FixtureCorpusTests: XCTestCase {
         let data = try Fixtures.data("all_elements.excalidraw")
         let file = try ExcalidrawFile.decode(from: data)
         XCTAssertEqual(file.elements.count, 7)
-        let reloaded = try ExcalidrawFile.decode(from: try file.jsonData())
+        let reloaded = try ExcalidrawFile.decode(from: file.jsonData())
         XCTAssertEqual(file, reloaded)
     }
 
     func testAllElementsIsDiffClean() throws {
         let data = try Fixtures.data("all_elements.excalidraw")
         let file = try ExcalidrawFile.decode(from: data)
-        assertJSONSemanticallyEqual(data, try file.jsonData())
+        try assertJSONSemanticallyEqual(data, file.jsonData())
     }
 
     func testAllElementsParsedDetails() throws {
-        let file = try ExcalidrawFile.decode(from: try Fixtures.data("all_elements.excalidraw"))
+        let file = try ExcalidrawFile.decode(from: Fixtures.data("all_elements.excalidraw"))
         let byID = Dictionary(file.elements.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
         guard case let .arrow(arrow) = byID["arrow-1"]?.kind else { return XCTFail("arrow") }
@@ -42,7 +42,7 @@ final class FixtureCorpusTests: XCTestCase {
     }
 
     func testLegacyFileLoadsAndRestores() throws {
-        let file = try ExcalidrawFile.decode(from: try Fixtures.data("legacy_minimal.excalidraw"))
+        let file = try ExcalidrawFile.decode(from: Fixtures.data("legacy_minimal.excalidraw"))
         XCTAssertEqual(file.version, 1)
         // Missing fields fall back to defaults.
         let rect = file.elements[0]

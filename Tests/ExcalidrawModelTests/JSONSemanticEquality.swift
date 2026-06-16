@@ -43,8 +43,8 @@ func assertJSONSemanticallyEqual(
     _ lhs: Data, _ rhs: Data, file: StaticString = #filePath, line: UInt = #line
 ) {
     do {
-        let a = JSONNormalized(try JSONSerialization.jsonObject(with: lhs, options: [.fragmentsAllowed]))
-        let b = JSONNormalized(try JSONSerialization.jsonObject(with: rhs, options: [.fragmentsAllowed]))
+        let a = try JSONNormalized(JSONSerialization.jsonObject(with: lhs, options: [.fragmentsAllowed]))
+        let b = try JSONNormalized(JSONSerialization.jsonObject(with: rhs, options: [.fragmentsAllowed]))
         XCTAssertEqual(a, b, "JSON payloads differ semantically", file: file, line: line)
     } catch {
         XCTFail("Failed to parse JSON: \(error)", file: file, line: line)
@@ -54,7 +54,7 @@ func assertJSONSemanticallyEqual(
 /// Locates the repository `Fixtures/` directory relative to this source file so
 /// tests can read sample documents without resource bundling.
 enum Fixtures {
-    static func data(_ name: String, file: StaticString = #filePath) throws -> Data {
+    static func data(_ name: String, file _: StaticString = #filePath) throws -> Data {
         // <root>/Tests/ExcalidrawModelTests/<thisFile> -> up 3 to <root>.
         let thisFile = URL(fileURLWithPath: "\(#filePath)")
         let root = thisFile.deletingLastPathComponent()

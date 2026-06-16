@@ -24,5 +24,7 @@ public enum ThemeFilter {
         return CGColor(red: r, green: g, blue: b, alpha: alpha)
     }
 
-    private static func clamp(_ v: CGFloat) -> CGFloat { Swift.min(1, Swift.max(0, v)) }
+    private static func clamp(_ v: CGFloat) -> CGFloat {
+        Swift.min(1, Swift.max(0, v))
+    }
 }

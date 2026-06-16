@@ -83,14 +83,14 @@ public enum FreehandKit {
                 point: Point(first.x, first.y),
                 pressure: first.pressure >= 0 ? first.pressure : 0.25,
                 vector: Vector(1, 1), distance: 0, runningLength: 0
-            ),
+            )
         ]
         var prevPoint = result[0].point
         var runningLength = 0.0
         var hasMinLength = false
         let maxIdx = pts.count - 1
 
-        for i in 1...maxIdx {
+        for i in 1 ... maxIdx {
             let raw = Point(pts[i].x, pts[i].y)
             let point = (options.last && i == maxIdx) ? raw : lerp(prevPoint, raw, 1 - options.streamline)
             if point.isApproximatelyEqual(to: prevPoint) { continue }
@@ -131,7 +131,7 @@ public enum FreehandKit {
         var pr = first.point
         var prevPressure = first.pressure
 
-        for i in 0..<points.count {
+        for i in 0 ..< points.count {
             let sp = points[i]
             if i < points.count - 1, totalLength - sp.runningLength < 3 { continue }
 
@@ -166,7 +166,9 @@ public enum FreehandKit {
 
     // MARK: Helpers
 
-    static func ease(_ t: Double) -> Double { sin(max(0, min(1, t)) * .pi / 2) }
+    static func ease(_ t: Double) -> Double {
+        sin(max(0, min(1, t)) * .pi / 2)
+    }
 
     static func lerp(_ a: Point, _ b: Point, _ t: Double) -> Point {
         Point(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
@@ -177,7 +179,7 @@ public enum FreehandKit {
     }
 
     static func circle(center: Point, radius: Double, segments: Int = 16) -> [Point] {
-        (0..<segments).map { i in
+        (0 ..< segments).map { i in
             let angle = 2 * Double.pi * Double(i) / Double(segments)
             return Point(center.x + radius * cos(angle), center.y + radius * sin(angle))
         }

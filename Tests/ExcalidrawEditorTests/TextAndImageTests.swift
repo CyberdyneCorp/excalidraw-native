@@ -28,7 +28,7 @@ final class TextAndImageTests: XCTestCase {
         XCTAssertFalse(ec.selectedIDs.contains(id))
     }
 
-    func testInsertImage() {
+    func testInsertImage() throws {
         let ec = makeEditor()
         let id = ec.insertImage(
             dataURL: "data:image/png;base64,AA==", mimeType: "image/png",
@@ -37,7 +37,7 @@ final class TextAndImageTests: XCTestCase {
         guard case let .image(props) = ec.scene.element(id: id)?.kind else { return XCTFail("image") }
         XCTAssertEqual(props.status, .saved)
         let fileId = try? XCTUnwrap(props.fileId)
-        XCTAssertEqual(ec.scene.files[fileId!]?.mimeType, "image/png")
+        XCTAssertEqual(try ec.scene.files[XCTUnwrap(fileId)]?.mimeType, "image/png")
         XCTAssertEqual(ec.scene.element(id: id)?.base.width, 100)
         XCTAssertTrue(ec.selectedIDs.contains(id))
     }

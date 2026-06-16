@@ -20,10 +20,10 @@ public struct Polygon: Equatable, Sendable {
         let y = point.y
         var inside = false
         var j = points.count - 1
-        for i in 0..<points.count {
+        for i in 0 ..< points.count {
             let xi = points[i].x, yi = points[i].y
             let xj = points[j].x, yj = points[j].y
-            if ((yi > y && yj <= y) || (yi <= y && yj > y)),
+            if (yi > y && yj <= y) || (yi <= y && yj > y),
                x < (xj - xi) * (y - yi) / (yj - yi) + xi {
                 inside.toggle()
             }
@@ -37,7 +37,7 @@ public struct Polygon: Equatable, Sendable {
         let x = point.x
         let y = point.y
         var winding = 0
-        for i in 0..<points.count {
+        for i in 0 ..< points.count {
             let j = (i + 1) % points.count
             let xi = points[i].x, yi = points[i].y
             let xj = points[j].x, yj = points[j].y
@@ -55,7 +55,7 @@ public struct Polygon: Equatable, Sendable {
     /// Whether `point` lies on any edge within `threshold` (`pointOnPolygon`).
     public func contains(_ point: Point, threshold: Double = ExcalidrawMath.precision) -> Bool {
         guard points.count >= 2 else { return false }
-        for i in 0..<(points.count - 1) where
+        for i in 0 ..< (points.count - 1) where
             LineSegment(points[i], points[i + 1]).contains(point, threshold: threshold) {
             return true
         }

@@ -55,8 +55,12 @@ public enum Exporter {
             scrollY: padding - bounds.minY,
             zoom: scale
         )
-        SceneRenderer().render(scene, in: ctx, viewport: viewport,
-                               size: CGSize(width: pixelWidth, height: pixelHeight))
+        SceneRenderer().render(
+            scene,
+            in: ctx,
+            viewport: viewport,
+            size: CGSize(width: pixelWidth, height: pixelHeight)
+        )
         return ctx.makeImage()
     }
 }

@@ -13,14 +13,14 @@ final class RestoreAndSceneTests: XCTestCase {
         let file = ExcalidrawFile(elements: [
             element("a", index: nil),
             element("b", index: nil),
-            element("c", index: nil),
+            element("c", index: nil)
         ])
         let restored = Restore.restore(file)
-        let indices = restored.elements.map { $0.base.index }
+        let indices = restored.elements.map(\.base.index)
         XCTAssertFalse(indices.contains(nil))
         // Keys must sort in document order.
-        let sorted = indices.compactMap { $0 }.sorted()
-        XCTAssertEqual(indices.compactMap { $0 }, sorted)
+        let sorted = indices.compactMap(\.self).sorted()
+        XCTAssertEqual(indices.compactMap(\.self), sorted)
     }
 
     func testRestorePreservesExistingIndices() {

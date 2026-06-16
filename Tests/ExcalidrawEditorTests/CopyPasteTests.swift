@@ -17,13 +17,13 @@ final class CopyPasteTests: XCTestCase {
         XCTAssertNil(makeEditor([rect("a")]).copyData())
     }
 
-    func testCopyPasteRoundTrip() {
+    func testCopyPasteRoundTrip() throws {
         let ec = makeEditor([rect("a")])
         ec.selectAll()
         let data = try? XCTUnwrap(ec.copyData())
         XCTAssertNotNil(data)
 
-        ec.paste(data!)
+        try ec.paste(XCTUnwrap(data))
         XCTAssertEqual(ec.scene.visibleElements.count, 2)
         // Pasted copy is offset and freshly selected (not the original).
         XCTAssertFalse(ec.selectedIDs.contains("a"))
@@ -37,7 +37,7 @@ final class CopyPasteTests: XCTestCase {
         XCTAssertEqual(ec.scene.visibleElements.count, 1)
     }
 
-    func testCopyIncludesImageFiles() {
+    func testCopyIncludesImageFiles() throws {
         var img = BaseProperties(id: "i"); img.width = 10; img.height = 10
         let file = BinaryFileData(mimeType: "image/png", id: "f1", dataURL: "data:image/png;base64,AA==", created: 0)
         let scene = Scene(
@@ -48,7 +48,7 @@ final class CopyPasteTests: XCTestCase {
         let ec = EditorController(scene: scene, idProvider: { idCount += 1; return "n\(idCount)" })
         ec.selectAll()
         let data = try? XCTUnwrap(ec.copyData())
-        let file2 = try? ExcalidrawFile.decode(from: data!)
+        let file2 = try? ExcalidrawFile.decode(from: try XCTUnwrap(data))
         XCTAssertEqual(file2?.files["f1"]?.mimeType, "image/png")
     }
 }

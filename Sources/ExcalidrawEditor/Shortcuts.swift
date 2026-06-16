@@ -52,17 +52,17 @@ public enum Shortcuts {
 
     private static func commandModified(_ chord: KeyChord) -> EditorCommand? {
         switch chord.key {
-        case "z": return chord.shift ? .redo : .undo
-        case "c": return .copy
-        case "x": return .cut
-        case "v": return .paste
-        case "d": return .duplicate
-        case "a": return .selectAll
-        case "g": return chord.shift ? .ungroup : .group
-        case "=", "+": return .zoomIn
-        case "-": return .zoomOut
-        case "0": return .resetZoom
-        default: return nil
+        case "z": chord.shift ? .redo : .undo
+        case "c": .copy
+        case "x": .cut
+        case "v": .paste
+        case "d": .duplicate
+        case "a": .selectAll
+        case "g": chord.shift ? .ungroup : .group
+        case "=", "+": .zoomIn
+        case "-": .zoomOut
+        case "0": .resetZoom
+        default: nil
         }
     }
 }

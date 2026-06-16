@@ -28,7 +28,7 @@ public final class EditorModel: ObservableObject {
     @Published public var editingTextOrigin: CGPoint = .zero
 
     /// Last known canvas size in points, for zoom-to-fit and image centring.
-    public var canvasSize: CGSize = CGSize(width: 1024, height: 768)
+    public var canvasSize: CGSize = .init(width: 1024, height: 768)
     /// Local clipboard fallback when no system pasteboard is wired.
     var clipboard: Data?
 
@@ -36,9 +36,17 @@ public final class EditorModel: ObservableObject {
     @Published public var zenMode = false
     @Published public var showCommandPalette = false
 
-    public func toggleTheme() { theme = theme == .light ? .dark : .light; revision += 1 }
-    public func toggleZenMode() { zenMode.toggle() }
-    public var zoomPercent: Int { Int((viewport.zoom * 100).rounded()) }
+    public func toggleTheme() {
+        theme = theme == .light ? .dark : .light; revision += 1
+    }
+
+    public func toggleZenMode() {
+        zenMode.toggle()
+    }
+
+    public var zoomPercent: Int {
+        Int((viewport.zoom * 100).rounded())
+    }
 
     public init(scene: ExcalidrawModel.Scene = ExcalidrawModel.Scene(), viewport: Viewport = Viewport()) {
         controller = EditorController(scene: scene)
@@ -133,15 +141,37 @@ public final class EditorModel: ObservableObject {
 
     // MARK: Action passthroughs
 
-    public func group() { controller.group(); revision += 1 }
-    public func duplicate() { controller.duplicate(); revision += 1 }
-    public func bringToFront() { controller.reorder(.front); revision += 1 }
-    public func sendToBack() { controller.reorder(.back); revision += 1 }
-    public func align(_ alignment: EditorController.Alignment) { controller.align(alignment); revision += 1 }
+    public func group() {
+        controller.group(); revision += 1
+    }
 
-    public func undo() { controller.undo(); revision += 1 }
-    public func redo() { controller.redo(); revision += 1 }
-    public func deleteSelected() { controller.deleteSelected(); revision += 1 }
+    public func duplicate() {
+        controller.duplicate(); revision += 1
+    }
+
+    public func bringToFront() {
+        controller.reorder(.front); revision += 1
+    }
+
+    public func sendToBack() {
+        controller.reorder(.back); revision += 1
+    }
+
+    public func align(_ alignment: EditorController.Alignment) {
+        controller.align(alignment); revision += 1
+    }
+
+    public func undo() {
+        controller.undo(); revision += 1
+    }
+
+    public func redo() {
+        controller.redo(); revision += 1
+    }
+
+    public func deleteSelected() {
+        controller.deleteSelected(); revision += 1
+    }
 
     // MARK: Clipboard
 
@@ -165,9 +195,17 @@ public final class EditorModel: ObservableObject {
 
     // MARK: Zoom
 
-    public func zoomIn() { setZoom(viewport.zoom * 1.2, anchor: canvasCenter) }
-    public func zoomOut() { setZoom(viewport.zoom / 1.2, anchor: canvasCenter) }
-    public func resetZoom() { setZoom(1, anchor: canvasCenter) }
+    public func zoomIn() {
+        setZoom(viewport.zoom * 1.2, anchor: canvasCenter)
+    }
+
+    public func zoomOut() {
+        setZoom(viewport.zoom / 1.2, anchor: canvasCenter)
+    }
+
+    public func resetZoom() {
+        setZoom(1, anchor: canvasCenter)
+    }
 
     /// Fit all content into the canvas with margin.
     public func zoomToFit() {
@@ -187,7 +225,9 @@ public final class EditorModel: ObservableObject {
         revision += 1
     }
 
-    private var canvasCenter: Point { Point(canvasSize.width / 2, canvasSize.height / 2) }
+    private var canvasCenter: Point {
+        Point(canvasSize.width / 2, canvasSize.height / 2)
+    }
 
     /// Zoom about a view-space anchor, keeping the scene point under it fixed.
     private func setZoom(_ target: Double, anchor: Point) {

@@ -116,13 +116,13 @@ extension ElementKind {
         case "ellipse": self = .ellipse
         case "embeddable": self = .embeddable
         case "iframe": self = .iframe
-        case "text": self = .text(try TextProperties(from: c))
-        case "freedraw": self = .freedraw(try FreedrawProperties(from: c))
-        case "line": self = .line(try LinearProperties(from: c))
-        case "arrow": self = .arrow(try ArrowProperties(from: c))
-        case "image": self = .image(try ImageProperties(from: c))
-        case "frame": self = .frame(name: try c.decodeIfPresent(String.self, forKey: .name))
-        case "magicframe": self = .magicframe(name: try c.decodeIfPresent(String.self, forKey: .name))
+        case "text": self = try .text(TextProperties(from: c))
+        case "freedraw": self = try .freedraw(FreedrawProperties(from: c))
+        case "line": self = try .line(LinearProperties(from: c))
+        case "arrow": self = try .arrow(ArrowProperties(from: c))
+        case "image": self = try .image(ImageProperties(from: c))
+        case "frame": self = try .frame(name: c.decodeIfPresent(String.self, forKey: .name))
+        case "magicframe": self = try .magicframe(name: c.decodeIfPresent(String.self, forKey: .name))
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .type, in: c, debugDescription: "Unknown element type \"\(type)\""

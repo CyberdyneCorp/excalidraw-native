@@ -12,11 +12,10 @@ public extension ExcalidrawMath {
     static func round(_ value: Double, precision: Int, mode: Rounding = .round) -> Double {
         let multiplier = pow(10.0, Double(precision))
         let scaled = (value + .ulpOfOne) * multiplier
-        let result: Double
-        switch mode {
-        case .round: result = scaled.rounded()
-        case .floor: result = scaled.rounded(.down)
-        case .ceil: result = scaled.rounded(.up)
+        let result: Double = switch mode {
+        case .round: scaled.rounded()
+        case .floor: scaled.rounded(.down)
+        case .ceil: scaled.rounded(.up)
         }
         return result / multiplier
     }
@@ -25,16 +24,17 @@ public extension ExcalidrawMath {
     static func roundToStep(_ value: Double, step: Double, mode: Rounding = .round) -> Double {
         let factor = 1 / step
         let scaled = value * factor
-        let result: Double
-        switch mode {
-        case .round: result = scaled.rounded()
-        case .floor: result = scaled.rounded(.down)
-        case .ceil: result = scaled.rounded(.up)
+        let result: Double = switch mode {
+        case .round: scaled.rounded()
+        case .floor: scaled.rounded(.down)
+        case .ceil: scaled.rounded(.up)
         }
         return result / factor
     }
 
-    static func average(_ a: Double, _ b: Double) -> Double { (a + b) / 2 }
+    static func average(_ a: Double, _ b: Double) -> Double {
+        (a + b) / 2
+    }
 
     /// Whether `a` and `b` are within `precision` of each other (`isCloseTo`).
     static func isCloseTo(_ a: Double, _ b: Double, precision: Double = ExcalidrawMath.precision) -> Bool {

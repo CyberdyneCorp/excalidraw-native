@@ -24,7 +24,7 @@ final class RoundTripTests: XCTestCase {
     func testMilestoneLoadMutateSave() throws {
         // Phase 1 milestone: load a real file, mutate via the API, save it back.
         let original = try Fixtures.data("minimal_scene.excalidraw")
-        var scene = Scene(file: try ExcalidrawFile.decode(from: original))
+        var scene = try Scene(file: ExcalidrawFile.decode(from: original))
 
         XCTAssertEqual(scene.element(id: "rect-1")?.base.version, 1)
         let didMutate = scene.mutate(id: "rect-1", timestamp: 1_700_000_001_000) {
@@ -34,7 +34,7 @@ final class RoundTripTests: XCTestCase {
         XCTAssertTrue(didMutate)
 
         let saved = scene.toFile()
-        let reloaded = Scene(file: try ExcalidrawFile.decode(from: try saved.jsonData()))
+        let reloaded = try Scene(file: ExcalidrawFile.decode(from: saved.jsonData()))
         let rect = try XCTUnwrap(reloaded.element(id: "rect-1"))
         XCTAssertEqual(rect.base.x, 150)
         XCTAssertEqual(rect.base.strokeColor, "#e03131")
@@ -43,7 +43,7 @@ final class RoundTripTests: XCTestCase {
     }
 
     func testParsesElementKinds() throws {
-        let file = try ExcalidrawFile.decode(from: try Fixtures.data("minimal_scene.excalidraw"))
+        let file = try ExcalidrawFile.decode(from: Fixtures.data("minimal_scene.excalidraw"))
         XCTAssertEqual(file.elements.count, 2)
         guard case .rectangle = file.elements[0].kind else {
             return XCTFail("expected rectangle")

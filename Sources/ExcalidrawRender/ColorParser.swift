@@ -28,18 +28,18 @@ public enum ColorParser {
         case 6: // #rrggbb
             let s = Array(hex)
             return CGColor(
-                red: component(Substring(String(s[0...1]))),
-                green: component(Substring(String(s[2...3]))),
-                blue: component(Substring(String(s[4...5]))),
+                red: component(Substring(String(s[0 ... 1]))),
+                green: component(Substring(String(s[2 ... 3]))),
+                blue: component(Substring(String(s[4 ... 5]))),
                 alpha: 1
             )
         case 8: // #rrggbbaa
             let s = Array(hex)
             return CGColor(
-                red: component(Substring(String(s[0...1]))),
-                green: component(Substring(String(s[2...3]))),
-                blue: component(Substring(String(s[4...5]))),
-                alpha: component(Substring(String(s[6...7])))
+                red: component(Substring(String(s[0 ... 1]))),
+                green: component(Substring(String(s[2 ... 3]))),
+                blue: component(Substring(String(s[4 ... 5]))),
+                alpha: component(Substring(String(s[6 ... 7])))
             )
         default:
             return nil
@@ -54,9 +54,9 @@ public enum ColorParser {
 
     private static func namedColor(_ value: String) -> CGColor? {
         switch value {
-        case "white": return CGColor(red: 1, green: 1, blue: 1, alpha: 1)
-        case "black": return CGColor(red: 0, green: 0, blue: 0, alpha: 1)
-        default: return nil
+        case "white": CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+        case "black": CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        default: nil
         }
     }
 }

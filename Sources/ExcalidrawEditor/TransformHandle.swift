@@ -7,10 +7,21 @@ import Foundation
 public enum TransformHandle: String, Sendable, CaseIterable {
     case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left, rotation
 
-    var movesLeft: Bool { self == .topLeft || self == .left || self == .bottomLeft }
-    var movesRight: Bool { self == .topRight || self == .right || self == .bottomRight }
-    var movesTop: Bool { self == .topLeft || self == .top || self == .topRight }
-    var movesBottom: Bool { self == .bottomLeft || self == .bottom || self == .bottomRight }
+    var movesLeft: Bool {
+        self == .topLeft || self == .left || self == .bottomLeft
+    }
+
+    var movesRight: Bool {
+        self == .topRight || self == .right || self == .bottomRight
+    }
+
+    var movesTop: Bool {
+        self == .topLeft || self == .top || self == .topRight
+    }
+
+    var movesBottom: Bool {
+        self == .bottomLeft || self == .bottom || self == .bottomRight
+    }
 }
 
 public enum Transform {
@@ -33,7 +44,7 @@ public enum Transform {
             .bottom: Point(midX, bounds.maxY),
             .bottomLeft: Point(bounds.minX, bounds.maxY),
             .left: Point(bounds.minX, midY),
-            .rotation: Point(midX, bounds.minY - rotationOffset),
+            .rotation: Point(midX, bounds.minY - rotationOffset)
         ]
     }
 
@@ -85,7 +96,9 @@ public enum Transform {
         e.base.width = element.base.width * sx
         e.base.height = element.base.height * sy
 
-        func scalePoints(_ pts: [Point]) -> [Point] { pts.map { Point($0.x * sx, $0.y * sy) } }
+        func scalePoints(_ pts: [Point]) -> [Point] {
+            pts.map { Point($0.x * sx, $0.y * sy) }
+        }
         switch e.kind {
         case var .line(p): p.points = scalePoints(p.points); e.kind = .line(p)
         case var .arrow(p): p.points = scalePoints(p.points); e.kind = .arrow(p)

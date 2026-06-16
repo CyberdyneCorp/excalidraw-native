@@ -39,9 +39,13 @@ public struct Vector: Equatable, Hashable, Sendable {
         u * other.u + v * other.v
     }
 
-    public var magnitudeSquared: Double { u * u + v * v }
+    public var magnitudeSquared: Double {
+        u * u + v * v
+    }
 
-    public var magnitude: Double { magnitudeSquared.squareRoot() }
+    public var magnitude: Double {
+        magnitudeSquared.squareRoot()
+    }
 
     /// Unit vector, or the zero vector when the magnitude is zero (`vectorNormalize`).
     public func normalized() -> Vector {

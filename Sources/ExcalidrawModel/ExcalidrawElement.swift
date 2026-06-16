@@ -8,8 +8,13 @@ public struct ExcalidrawElement: Equatable, Sendable, Identifiable, Codable {
     public var base: BaseProperties
     public var kind: ElementKind
 
-    public var id: String { base.id }
-    public var type: String { kind.typeName }
+    public var id: String {
+        base.id
+    }
+
+    public var type: String {
+        kind.typeName
+    }
 
     public init(base: BaseProperties, kind: ElementKind) {
         self.base = base

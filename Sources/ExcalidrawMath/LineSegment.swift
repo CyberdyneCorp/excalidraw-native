@@ -25,13 +25,12 @@ public struct LineSegment: Equatable, Sendable {
         var param = -1.0
         if lenSq != 0 { param = aToP.dot(aToB) / lenSq }
 
-        let closest: Point
-        if param < 0 {
-            closest = a
+        let closest: Point = if param < 0 {
+            a
         } else if param > 1 {
-            closest = b
+            b
         } else {
-            closest = Point(a.x + param * aToB.u, a.y + param * aToB.v)
+            Point(a.x + param * aToB.u, a.y + param * aToB.v)
         }
         return point.distance(to: closest)
     }

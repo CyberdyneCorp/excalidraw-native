@@ -43,5 +43,7 @@ public final class ShapeCache {
         entries.removeAll()
     }
 
-    var count: Int { entries.count }
+    var count: Int {
+        entries.count
+    }
 }

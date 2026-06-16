@@ -48,7 +48,7 @@ final class RoughJSParityTests: XCTestCase {
             ("move", [0.857263, 0.963885]),
             ("bcurveTo", [19.680696, 0.960515, 39.440775, -1.932821, 99.206405, 0.392336]),
             ("move", [-0.648666, 0.264599]),
-            ("bcurveTo", [22.574642, 0.381984, 44.356771, -0.187689, 99.419626, 0.752816]),
+            ("bcurveTo", [22.574642, 0.381984, 44.356771, -0.187689, 99.419626, 0.752816])
         ]
         assertMatches(gen.line(Point(0, 0), Point(100, 0), options: options(seed: 1)), expected)
     }
@@ -70,7 +70,7 @@ final class RoughJSParityTests: XCTestCase {
             ("move", [-0.720604, 49.718532]),
             ("bcurveTo", [0.897899, 34.131153, -0.834534, 21.499064, 0.5918, -1.206081]),
             ("move", [0.217957, 50.998223]),
-            ("bcurveTo", [-1.083369, 31.157748, -0.577315, 12.722883, 0.440741, 0.98803]),
+            ("bcurveTo", [-1.083369, 31.157748, -0.577315, 12.722883, 0.440741, 0.98803])
         ]
         assertMatches(gen.rectangle(x: 0, y: 0, width: 100, height: 50, options: options(seed: 1)), expected)
     }
@@ -102,7 +102,7 @@ final class RoughJSParityTests: XCTestCase {
             ("bcurveTo", [3.086501, 38.447896, 1.614157, 31.722135, 2.563425, 26.360088]),
             ("bcurveTo", [3.512692, 20.998042, 6.802891, 15.081133, 12.381885, 11.168883]),
             ("bcurveTo", [17.96088, 7.256633, 31.827755, 4.243138, 36.037391, 2.886586]),
-            ("bcurveTo", [40.247027, 1.530035, 37.152482, 2.62658, 37.639701, 3.029573]),
+            ("bcurveTo", [40.247027, 1.530035, 37.152482, 2.62658, 37.639701, 3.029573])
         ]
         let drawable = gen.ellipse(x: 50, y: 30, width: 100, height: 60, options: options(seed: 1)).drawable
         assertMatches(drawable, expected)
@@ -110,7 +110,7 @@ final class RoughJSParityTests: XCTestCase {
 
     /// The outline of a filled rectangle must match rough.js exactly — proving
     /// the outline is generated from a fresh seed independent of the fill.
-    func testFilledRectangleOutlineMatchesRoughJS() {
+    func testFilledRectangleOutlineMatchesRoughJS() throws {
         let expectedOutline: [(String, [Double])] = [
             ("move", [0.857263, 0.963885]),
             ("bcurveTo", [7.680426, 1.082109, 15.440236, -1.811228, 39.206405, 0.392336]),
@@ -127,7 +127,7 @@ final class RoughJSParityTests: XCTestCase {
             ("move", [-0.720604, 39.718532]),
             ("bcurveTo", [0.970473, 26.999246, -0.76196, 17.235251, 0.5918, -1.206081]),
             ("move", [0.217957, 40.998223]),
-            ("bcurveTo", [-1.021847, 24.795411, -0.515793, 9.998208, 0.440741, 0.98803]),
+            ("bcurveTo", [-1.021847, 24.795411, -0.515793, 9.998208, 0.440741, 0.98803])
         ]
         var opts = options(seed: 1)
         opts.fill = "#f00"
@@ -135,7 +135,7 @@ final class RoughJSParityTests: XCTestCase {
         let drawable = gen.rectangle(x: 0, y: 0, width: 40, height: 40, options: opts)
         let outline = drawable.sets.first { $0.type == .path }
         XCTAssertNotNil(outline)
-        let outlineDrawable = Drawable(shape: "rectangle", sets: [outline!], options: opts)
+        let outlineDrawable = try Drawable(shape: "rectangle", sets: [XCTUnwrap(outline)], options: opts)
         assertMatches(outlineDrawable, expectedOutline)
     }
 }
@@ -145,7 +145,7 @@ extension RoughJSParityTests {
     /// scan-line produces a slightly different line set (e.g. 56 vs 60 ops for
     /// this case) because rough.js's edge handling differs. Stroke/shape parity
     /// (above) is exact; documenting fill as approximate is intentional.
-    func testHachureFillIsApproximatelyEquivalent() {
+    func testHachureFillIsApproximatelyEquivalent() throws {
         var opts = options(seed: 1)
         opts.fill = "#f00"
         opts.fillStyle = "hachure"
@@ -153,7 +153,7 @@ extension RoughJSParityTests {
         let fill = drawable.sets.first { $0.type == .fillSketch }
         XCTAssertNotNil(fill)
         // Same order of magnitude as rough.js's 60 ops for this shape.
-        XCTAssertGreaterThan(fill!.ops.count, 40)
-        XCTAssertLessThan(fill!.ops.count, 80)
+        XCTAssertGreaterThan(try XCTUnwrap(fill?.ops.count), 40)
+        XCTAssertLessThan(try XCTUnwrap(fill?.ops.count), 80)
     }
 }

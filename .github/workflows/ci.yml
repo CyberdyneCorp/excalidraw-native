@@ -31,9 +31,6 @@ jobs:
   lint:
     name: SwiftLint & SwiftFormat
     runs-on: macos-15
-    # Advisory until the formatters are validated against the codebase; the
-    # build/coverage and app jobs are the blocking gates.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
