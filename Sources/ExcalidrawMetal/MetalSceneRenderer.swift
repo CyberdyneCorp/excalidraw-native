@@ -25,6 +25,8 @@ public final class MetalSceneRenderer: SceneRendering {
     /// re-tessellates elements that actually changed (the dominant per-frame
     /// cost). Lives on the renderer, which outlives individual frames.
     private let geometryCache = GeometryCache()
+    /// Decoded image → GPU texture cache, for drawing image elements as quads.
+    private let imageTextures: ImageTextureCache
 
     /// Create a Metal renderer, or `nil` when Metal is unavailable on this host
     /// (caller falls back to `SceneRenderer`). Shares one `ShapeCache` between
@@ -32,6 +34,7 @@ public final class MetalSceneRenderer: SceneRendering {
     public init?(shapeCache: ShapeCache = ShapeCache()) {
         guard let gpu = MetalRenderContext() else { return nil }
         self.gpu = gpu
+        imageTextures = ImageTextureCache(device: gpu.metalDevice)
         self.shapeCache = shapeCache
         cgRenderer = SceneRenderer(shapeCache: shapeCache)
     }
@@ -70,7 +73,9 @@ public final class MetalSceneRenderer: SceneRendering {
         // 2. GPU shape image (over the background clear when we own it),
         //    composited upright into the y-down context.
         let clearColor = gpuBackground ? Self.backgroundClear(scene, theme: theme) : Self.transparentClear
-        if let image = gpuImage(geometry, viewport: viewport, size: size, ctx: ctx, clearColor: clearColor) {
+        if let image = gpuImage(
+            geometry, files: scene.files, viewport: viewport, size: size, ctx: ctx, clearColor: clearColor
+        ) {
             ctx.saveGState()
             ctx.translateBy(x: 0, y: size.height)
             ctx.scaleBy(x: 1, y: -1)
@@ -100,11 +105,11 @@ public final class MetalSceneRenderer: SceneRendering {
             visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
             shapeCache: shapeCache, geometryCache: geometryCache
         )
-        gpu.renderToDrawable(
-            drawable, vertices: geometry.vertices,
-            transform: Self.clipTransform(viewport: viewport, size: size),
+        let frame = makeFrame(
+            geometry, files: scene.files, viewport: viewport, size: size,
             clearColor: Self.backgroundClear(scene, theme: theme)
         )
+        gpu.renderToDrawable(drawable, frame: frame)
     }
 
     /// The GPU cost of one direct frame (geometry + clear + draw, no read-back),
@@ -119,12 +124,11 @@ public final class MetalSceneRenderer: SceneRendering {
             visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
             shapeCache: shapeCache, geometryCache: geometryCache
         )
-        return gpu.renderNoReadback(
-            vertices: geometry.vertices,
-            transform: Self.clipTransform(viewport: viewport, size: size),
-            clearColor: Self.backgroundClear(scene, theme: theme),
-            pixelWidth: pixelWidth, pixelHeight: pixelHeight
+        let frame = makeFrame(
+            geometry, files: scene.files, viewport: viewport, size: size,
+            clearColor: Self.backgroundClear(scene, theme: theme)
         )
+        return gpu.renderNoReadback(frame: frame, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
     }
 
     /// Per-phase wall-clock breakdown of one frame, for the on-device renderer
@@ -170,7 +174,9 @@ public final class MetalSceneRenderer: SceneRendering {
         let clearColor = gridOn ? Self.transparentClear : Self.backgroundClear(scene, theme: theme)
         var image: CGImage?
         timings.gpuMs = ms {
-            image = gpuImage(geometry, viewport: viewport, size: size, ctx: ctx, clearColor: clearColor)
+            image = gpuImage(
+                geometry, files: scene.files, viewport: viewport, size: size, ctx: ctx, clearColor: clearColor
+            )
         }
         if let image {
             ctx.saveGState()
@@ -189,18 +195,62 @@ public final class MetalSceneRenderer: SceneRendering {
     }
 
     private func gpuImage(
-        _ geometry: SceneGeometry, viewport: Viewport, size: CGSize,
-        ctx: CGContext, clearColor: MTLClearColor
+        _ geometry: SceneGeometry, files: [String: BinaryFileData], viewport: Viewport,
+        size: CGSize, ctx: CGContext, clearColor: MTLClearColor
     ) -> CGImage? {
         // Match the GPU texture to the context's backing resolution so shapes
         // stay crisp at any zoom / display scale.
         let pixelWidth = ctx.width > 0 ? ctx.width : Int(size.width.rounded())
         let pixelHeight = ctx.height > 0 ? ctx.height : Int(size.height.rounded())
-        let transform = Self.clipTransform(viewport: viewport, size: size)
-        return gpu.image(
-            vertices: geometry.vertices, transform: transform, clearColor: clearColor,
-            pixelWidth: pixelWidth, pixelHeight: pixelHeight
+        let frame = makeFrame(geometry, files: files, viewport: viewport, size: size, clearColor: clearColor)
+        return gpu.image(frame: frame, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+    }
+
+    /// Build the GPU frame (colored triangles + textured image quads + ordered
+    /// draw commands) for `geometry`, resolving image textures from `files`.
+    private func makeFrame(
+        _ geometry: SceneGeometry, files: [String: BinaryFileData],
+        viewport: Viewport, size: CGSize, clearColor: MTLClearColor
+    ) -> MetalRenderContext.Frame {
+        var imageVertices: [Float] = []
+        imageVertices.reserveCapacity(geometry.imageDraws.count * 24)
+        var textures: [MTLTexture?] = []
+        textures.reserveCapacity(geometry.imageDraws.count)
+        for draw in geometry.imageDraws {
+            appendImageQuad(draw, into: &imageVertices)
+            textures.append(files[draw.fileId].flatMap {
+                imageTextures.texture(fileId: draw.fileId, dataURL: $0.dataURL)
+            })
+        }
+
+        var commands: [MetalRenderContext.Command] = []
+        commands.reserveCapacity(geometry.drawCommands.count)
+        for command in geometry.drawCommands {
+            switch command {
+            case let .triangles(start, count):
+                commands.append(.triangles(start: start, count: count))
+            case let .image(index):
+                if let texture = textures[index] {
+                    commands.append(.image(
+                        vertexStart: index * 6, texture: texture, opacity: geometry.imageDraws[index].opacity
+                    ))
+                }
+            }
+        }
+        return MetalRenderContext.Frame(
+            coloredVertices: geometry.vertices, imageVertices: imageVertices, commands: commands,
+            transform: Self.clipTransform(viewport: viewport, size: size), clearColor: clearColor
         )
+    }
+
+    /// Two triangles (6 vertices of x, y, u, v) for an image quad.
+    private func appendImageQuad(_ draw: SceneGeometry.ImageDraw, into out: inout [Float]) {
+        for i in [0, 1, 2, 0, 2, 3] {
+            out.append(Float(draw.corners[i].x))
+            out.append(Float(draw.corners[i].y))
+            out.append(Float(draw.uvs[i].x))
+            out.append(Float(draw.uvs[i].y))
+        }
     }
 
     static let transparentClear = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
