@@ -126,28 +126,41 @@ final class SmokeUITests: XCTestCase {
     }
 
     func testMetalRendererDrawMoveAndZoom() throws {
-        // Switch to the Metal (GPU) renderer, then exercise the same draw/move/
-        // zoom paths to make sure the GPU backend renders without crashing or
-        // garbling. The toggle only exists when Metal is supported.
         let toggle = app.buttons["renderer-toggle"]
         guard toggle.waitForExistence(timeout: 5) else {
             throw XCTSkip("Metal renderer unavailable on this device")
         }
-        toggle.tap()
 
-        // Shapes that go through GPU tessellation (rect, ellipse, arrow).
+        // Draw shapes (rect/ellipse/arrow) + a text label in the default Core
+        // Graphics renderer first, and capture what's on screen.
         tap("tool-rectangle")
         drag(CGVector(dx: 0.25, dy: 0.25), CGVector(dx: 0.5, dy: 0.45))
         tap("tool-ellipse")
         drag(CGVector(dx: 0.55, dy: 0.25), CGVector(dx: 0.75, dy: 0.45))
         tap("tool-arrow")
-        drag(CGVector(dx: 0.3, dy: 0.6), CGVector(dx: 0.7, dy: 0.6))
-
-        // Move a shape (layered render under Metal) and zoom (crisp re-render).
+        drag(CGVector(dx: 0.3, dy: 0.62), CGVector(dx: 0.7, dy: 0.62))
+        tap("tool-text")
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.8)).tap()
+        let textField = app.textFields["text-editor"]
+        if textField.waitForExistence(timeout: 5) {
+            textField.tap(); textField.typeText("Metal")
+            app.buttons["text-done"].tap()
+        }
         tap("tool-selection")
+        snapshot("editor-coregraphics")
+
+        // Switch to the Metal hybrid (GPU shapes + CG text overlay) — the same
+        // scene must still be visible — and capture it.
+        toggle.tap()
+        sleep(1)
+        snapshot("editor-metal-hybrid")
+
+        // Move a shape and zoom under the GPU backend; capture the zoomed view.
         drag(CGVector(dx: 0.3, dy: 0.35), CGVector(dx: 0.45, dy: 0.5))
-        canvas.pinch(withScale: 2.2, velocity: 1.4) // zoom in — must stay crisp
-        canvas.pinch(withScale: 0.5, velocity: -1.4) // zoom out
+        canvas.pinch(withScale: 2.2, velocity: 1.4)
+        sleep(1)
+        snapshot("editor-metal-zoomed")
+        canvas.pinch(withScale: 0.5, velocity: -1.4)
 
         // Export still works with the GPU backend active.
         app.buttons["export"].tap()
@@ -157,6 +170,13 @@ final class SmokeUITests: XCTestCase {
         toggle.tap()
         XCTAssertEqual(app.state, .runningForeground)
         XCTAssertTrue(canvas.exists)
+    }
+
+    private func snapshot(_ name: String) {
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
     }
 
     func testRendererBenchmarkScreenShowsResults() {

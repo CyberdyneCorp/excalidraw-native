@@ -59,4 +59,33 @@ public extension EditorModel {
     func toggleZenMode() {
         zenMode.toggle()
     }
+
+    // MARK: Metal direct-to-drawable hybrid
+
+    /// The active renderer as a `MetalSceneRenderer` (for direct-to-drawable
+    /// presentation), or `nil` when Core Graphics is active.
+    var metalSceneRenderer: MetalSceneRenderer? {
+        renderer as? MetalSceneRenderer
+    }
+
+    /// Whether the editor canvas should use the Metal hybrid: GPU shapes drawn
+    /// straight to a `CAMetalLayer`, with text + selection on a CG overlay.
+    var useMetalHybrid: Bool {
+        metalSceneRenderer != nil
+    }
+
+    /// Draw the editor's Metal-hybrid CG overlay: the elements the GPU does *not*
+    /// handle (text, frames, embeddables) plus the interactive overlay (selection
+    /// box, handles, snap lines), over a transparent background. The GPU layer
+    /// below has already painted the background and all tessellated content.
+    func drawMetalOverlay(into ctx: CGContext, size: CGSize) {
+        let gpuHandled = Set(
+            controller.scene.visibleElements.filter { SceneGeometry.isGPUHandled($0) }.map(\.id)
+        )
+        cgOverlayRenderer.render(
+            controller.scene, in: ctx, viewport: viewport, size: size,
+            theme: theme, skipping: gpuHandled, fillBackground: false
+        )
+        drawOverlay(into: ctx, size: size)
+    }
 }

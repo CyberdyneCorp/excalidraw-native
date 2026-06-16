@@ -174,30 +174,56 @@ public struct EditorView: View {
 
     // MARK: Canvas
 
+    /// The rendering surface: the Metal direct-to-drawable hybrid (GPU shapes +
+    /// a CG text/selection overlay) when the Metal backend is active on iOS,
+    /// otherwise the Core Graphics canvas.
+    @ViewBuilder
+    private var canvasContent: some View {
+        #if canImport(UIKit)
+            if model.useMetalHybrid {
+                ZStack {
+                    EditorMetalCanvas(model: model)
+                    Canvas { context, size in
+                        _ = model.revision
+                        context.withCGContext { cg in model.drawMetalOverlay(into: cg, size: size) }
+                    }
+                }
+            } else {
+                cgCanvas
+            }
+        #else
+            cgCanvas
+        #endif
+    }
+
+    private var cgCanvas: some View {
+        Canvas { context, size in
+            _ = model.revision
+            // Stage C: during a pan/zoom gesture, composite the transformed
+            // scene snapshot (the view background shows through revealed area).
+            if let snapshot = model.gestureSnapshot(size: size) {
+                context.draw(Image(decorative: snapshot.image, scale: model.displayScale), in: snapshot.rect)
+            }
+            // Stage B: during an interaction, blit the cached static layer
+            // and redraw only the in-flight elements; otherwise full render.
+            else if let staticImage = model.staticLayerImage(size: size) {
+                context.draw(
+                    Image(decorative: staticImage, scale: model.displayScale),
+                    in: CGRect(origin: .zero, size: size)
+                )
+                context.withCGContext { cg in model.renderDynamicOverlay(into: cg, size: size) }
+            } else {
+                context.withCGContext { cg in model.renderFull(into: cg, size: size) }
+            }
+        }
+    }
+
     private var canvas: some View {
         GeometryReader { geo in
-            Canvas { context, size in
-                _ = model.revision
-                // Stage C: during a pan/zoom gesture, composite the transformed
-                // scene snapshot (the view background shows through revealed area).
-                if let snapshot = model.gestureSnapshot(size: size) {
-                    context.draw(Image(decorative: snapshot.image, scale: model.displayScale), in: snapshot.rect)
-                }
-                // Stage B: during an interaction, blit the cached static layer
-                // and redraw only the in-flight elements; otherwise full render.
-                else if let staticImage = model.staticLayerImage(size: size) {
-                    context.draw(
-                        Image(decorative: staticImage, scale: model.displayScale),
-                        in: CGRect(origin: .zero, size: size)
-                    )
-                    context.withCGContext { cg in model.renderDynamicOverlay(into: cg, size: size) }
-                } else {
-                    context.withCGContext { cg in model.renderFull(into: cg, size: size) }
-                }
-            }
-            .onAppear { model.canvasSize = geo.size; model.displayScale = displayScale }
-            .onChange(of: displayScale) { _, scale in model.displayScale = scale }
-            .onChange(of: geo.size) { _, newSize in model.canvasSize = newSize }
+            canvasContent
+                .onAppear { model.canvasSize = geo.size; model.displayScale = displayScale }
+                .onChange(of: displayScale) { _, scale in model.displayScale = scale }
+                .onChange(of: geo.size) { _, newSize in model.canvasSize = newSize }
         }
         .accessibilityIdentifier("excalidraw-canvas")
         .overlay(inputLayer)

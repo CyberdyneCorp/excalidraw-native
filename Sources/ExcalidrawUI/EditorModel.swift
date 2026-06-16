@@ -14,6 +14,8 @@ public final class EditorModel: ObservableObject {
     /// Active scene renderer (Core Graphics by default; swappable to Metal via
     /// `setRenderer`). See `EditorModel+Renderer.swift`.
     var renderer: SceneRendering = SceneRenderer()
+    /// Core Graphics renderer for the Metal-hybrid text/overlay pass.
+    let cgOverlayRenderer = SceneRenderer()
     @Published public internal(set) var rendererKind: RendererKind = .coreGraphics
 
     @Published public var viewport: Viewport

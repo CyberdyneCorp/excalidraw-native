@@ -147,10 +147,15 @@ public struct SceneGeometry {
         return ImageDraw(fileId: fileId, corners: corners, uvs: uvs, opacity: Float(base.opacity / 100))
     }
 
-    /// GPU-eligible elements: rough shapes and freedraw (solid, dashed or dotted)
-    /// with no frame clipping. Everything else (text/image/frame/embeddable,
-    /// framed children) falls through to Core Graphics.
     private func isTessellatable(_ element: ExcalidrawElement) -> Bool {
+        Self.isGPUHandled(element)
+    }
+
+    /// GPU-eligible elements: rough shapes, freedraw (solid, dashed or dotted)
+    /// and images, with no frame clipping. Everything else (text, frames,
+    /// embeddables, framed children) falls through to Core Graphics. Cheap (no
+    /// tessellation) so the editor's CG overlay can compute the skip set.
+    public static func isGPUHandled(_ element: ExcalidrawElement) -> Bool {
         guard element.base.frameId == nil else { return false }
         switch element.kind {
         case .rectangle, .diamond, .ellipse, .line, .arrow, .freedraw, .image: return true
