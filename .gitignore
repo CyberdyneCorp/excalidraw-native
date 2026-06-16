@@ -4,9 +4,13 @@
 Package.resolved
 
 # Xcode
-*.xcodeproj/
+# NOTE: ExcalidrawSwift.xcodeproj IS committed (generated from project.yml but
+# kept in the repo so it's stable and never drifts). Only ignore the
+# user-specific / cache contents inside any .xcodeproj.
 *.xcworkspace/
 xcuserdata/
+**/xcuserdata/
+**/project.xcworkspace/xcuserdata/
 DerivedData/
 *.xcuserstate
 build/

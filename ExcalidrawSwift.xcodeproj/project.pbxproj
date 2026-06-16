@@ -1,0 +1,484 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		212915047B3EAEF62F7A08DE /* ExcalidrawModel in Frameworks */ = {isa = PBXBuildFile; productRef = 391A0FD4CD1503BD9F5B0F4D /* ExcalidrawModel */; };
+		838DFCC2CC809E301183E0EA /* ExcalidrawRender in Frameworks */ = {isa = PBXBuildFile; productRef = 149492DF6CA44C6B58BF54B1 /* ExcalidrawRender */; };
+		867447BF5E89709D59229A49 /* ExcalidrawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E1A9EAB0F2CFE2960655AE /* ExcalidrawApp.swift */; };
+		8F813DB42A25BD00D1EF2C87 /* ExcalidrawUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11ED78A939E9552DD837CAF1 /* ExcalidrawUI */; };
+		BB2E451AC70807DB3531B87D /* sample.excalidraw in Resources */ = {isa = PBXBuildFile; fileRef = F04B3645468416DBC8FE24BA /* sample.excalidraw */; };
+		D24DD6A402E1EB6E7D7D3161 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		93B527E81D57263FDF0F916D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 535187D54BFC245328A5064D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA2A4D69C76C22509958FDCA;
+			remoteInfo = ExcalidrawApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		15E1A9EAB0F2CFE2960655AE /* ExcalidrawApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExcalidrawApp.swift; sourceTree = "<group>"; };
+		253BD78B90B09B251AE6DDA8 /* excalidraw-swift */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "excalidraw-swift"; path = .; sourceTree = SOURCE_ROOT; };
+		3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExcalidrawApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
+		B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ExcalidrawAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F04B3645468416DBC8FE24BA /* sample.excalidraw */ = {isa = PBXFileReference; lastKnownFileType = text; path = sample.excalidraw; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F73542FCEDB9798B617D9C1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F813DB42A25BD00D1EF2C87 /* ExcalidrawUI in Frameworks */,
+				212915047B3EAEF62F7A08DE /* ExcalidrawModel in Frameworks */,
+				838DFCC2CC809E301183E0EA /* ExcalidrawRender in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3C885A33E559788C171AE345 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */,
+				B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		579F8E28F6CC7CEF0CF62AB6 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F04B3645468416DBC8FE24BA /* sample.excalidraw */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		6430DDFE747C8B1AE7D1C14F /* AppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */,
+			);
+			path = AppUITests;
+			sourceTree = "<group>";
+		};
+		9D7667B6B12A49292CB62608 = {
+			isa = PBXGroup;
+			children = (
+				EAD7B718EA5436E362643C43 /* App */,
+				6430DDFE747C8B1AE7D1C14F /* AppUITests */,
+				D7C161FCED492264745C2DB0 /* Packages */,
+				3C885A33E559788C171AE345 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D7C161FCED492264745C2DB0 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				253BD78B90B09B251AE6DDA8 /* excalidraw-swift */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		EAD7B718EA5436E362643C43 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				15E1A9EAB0F2CFE2960655AE /* ExcalidrawApp.swift */,
+				579F8E28F6CC7CEF0CF62AB6 /* Resources */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		32FBD13A623FD01C4BBDA7FE /* ExcalidrawAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 159F560BC86B1E081DA965D9 /* Build configuration list for PBXNativeTarget "ExcalidrawAppUITests" */;
+			buildPhases = (
+				76BC4AB77E3E87BF314E5910 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6D9ECC93F2E26A9A8196B5AE /* PBXTargetDependency */,
+			);
+			name = ExcalidrawAppUITests;
+			packageProductDependencies = (
+			);
+			productName = ExcalidrawAppUITests;
+			productReference = B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		BA2A4D69C76C22509958FDCA /* ExcalidrawApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BA4F0BAC43E65D5510FCF22 /* Build configuration list for PBXNativeTarget "ExcalidrawApp" */;
+			buildPhases = (
+				4E71E8CFE0E2BBA1D2D10500 /* Sources */,
+				CF9D93C17A51F9C8D8200184 /* Resources */,
+				F73542FCEDB9798B617D9C1F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ExcalidrawApp;
+			packageProductDependencies = (
+				11ED78A939E9552DD837CAF1 /* ExcalidrawUI */,
+				391A0FD4CD1503BD9F5B0F4D /* ExcalidrawModel */,
+				149492DF6CA44C6B58BF54B1 /* ExcalidrawRender */,
+			);
+			productName = ExcalidrawApp;
+			productReference = 3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		535187D54BFC245328A5064D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					32FBD13A623FD01C4BBDA7FE = {
+						TestTargetID = BA2A4D69C76C22509958FDCA;
+					};
+				};
+			};
+			buildConfigurationList = A5B20FA2AE9B62C0F64B54C7 /* Build configuration list for PBXProject "ExcalidrawSwift" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9D7667B6B12A49292CB62608;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8B7C0F49B905AF131744B82F /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3C885A33E559788C171AE345 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BA2A4D69C76C22509958FDCA /* ExcalidrawApp */,
+				32FBD13A623FD01C4BBDA7FE /* ExcalidrawAppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CF9D93C17A51F9C8D8200184 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB2E451AC70807DB3531B87D /* sample.excalidraw in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4E71E8CFE0E2BBA1D2D10500 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				867447BF5E89709D59229A49 /* ExcalidrawApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		76BC4AB77E3E87BF314E5910 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D24DD6A402E1EB6E7D7D3161 /* SmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6D9ECC93F2E26A9A8196B5AE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA2A4D69C76C22509958FDCA /* ExcalidrawApp */;
+			targetProxy = 93B527E81D57263FDF0F916D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		31E8B0B07754B34EF1CA84B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amini.excalidraw.app.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ExcalidrawApp;
+			};
+			name = Debug;
+		};
+		4BD039EF2ACF6672949F92F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2C69VJZSNR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amini.excalidraw.app;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C6E5360ECBAC708C14439F57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D79BF8F3946FC75AC65784BC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E4FEB6D5F05108ABDDDE6E5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amini.excalidraw.app.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ExcalidrawApp;
+			};
+			name = Release;
+		};
+		FD1C6EA88992B2F898A72C54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2C69VJZSNR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amini.excalidraw.app;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0BA4F0BAC43E65D5510FCF22 /* Build configuration list for PBXNativeTarget "ExcalidrawApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD1C6EA88992B2F898A72C54 /* Debug */,
+				4BD039EF2ACF6672949F92F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		159F560BC86B1E081DA965D9 /* Build configuration list for PBXNativeTarget "ExcalidrawAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				31E8B0B07754B34EF1CA84B3 /* Debug */,
+				E4FEB6D5F05108ABDDDE6E5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A5B20FA2AE9B62C0F64B54C7 /* Build configuration list for PBXProject "ExcalidrawSwift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D79BF8F3946FC75AC65784BC /* Debug */,
+				C6E5360ECBAC708C14439F57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		8B7C0F49B905AF131744B82F /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		11ED78A939E9552DD837CAF1 /* ExcalidrawUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ExcalidrawUI;
+		};
+		149492DF6CA44C6B58BF54B1 /* ExcalidrawRender */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ExcalidrawRender;
+		};
+		391A0FD4CD1503BD9F5B0F4D /* ExcalidrawModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ExcalidrawModel;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 535187D54BFC245328A5064D /* Project object */;
+}
