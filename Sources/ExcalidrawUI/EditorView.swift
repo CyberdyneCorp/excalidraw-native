@@ -220,6 +220,10 @@ public struct EditorView: View {
                 Stepper("W \(Int(model.strokeWidth))", value: Binding(
                     get: { model.strokeWidth }, set: { model.setStrokeWidth($0) }
                 ), in: 1 ... 20).fixedSize()
+                if showFontControls {
+                    Divider().frame(height: 24)
+                    fontControls
+                }
                 if exported {
                     Text("Exported").foregroundStyle(.secondary).accessibilityIdentifier("exported-confirmation")
                 }
@@ -227,6 +231,32 @@ public struct EditorView: View {
         }
         .frame(height: 44)
         .background(.thinMaterial)
+    }
+
+    private let fontFamilies: [(Int, String)] = [
+        (FontFamily.excalifont, "Hand-drawn"),
+        (FontFamily.helvetica, "Normal"),
+        (FontFamily.cascadia, "Code")
+    ]
+
+    /// Show font controls when the text tool is active or a text element is selected.
+    private var showFontControls: Bool {
+        model.activeTool == .text || model.editingTextID != nil
+            || model.controller.selectedElements.contains { if case .text = $0.kind { return true }; return false }
+    }
+
+    @ViewBuilder
+    private var fontControls: some View {
+        Menu {
+            ForEach(fontFamilies, id: \.0) { id, name in
+                Button(name) { model.setFontFamily(id) }
+            }
+        } label: {
+            Image(systemName: "character").accessibilityIdentifier("font-family")
+        }
+        Stepper("\(Int(model.fontSize))pt", value: Binding(
+            get: { model.fontSize }, set: { model.setFontSize($0) }
+        ), in: 8 ... 96, step: 2).fixedSize().accessibilityIdentifier("font-size")
     }
 
     private var footer: some View {

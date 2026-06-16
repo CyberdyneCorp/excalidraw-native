@@ -56,13 +56,43 @@ public extension EditorController {
     /// Create an empty text element at `point` and select it. Returns its id so
     /// the UI can drive on-canvas editing; commit happens via `setText`.
     @discardableResult
-    func createText(at point: Point, fontSize: Double = 20) -> String {
+    func createText(at point: Point, fontSize: Double? = nil) -> String {
         let base = currentItem.makeBase(id: nextID(), seed: nextSeed(), x: point.x, y: point.y)
-        let props = TextProperties(fontSize: fontSize, text: "", originalText: "")
+        let props = TextProperties(
+            fontSize: fontSize ?? currentItem.fontSize, fontFamily: currentItem.fontFamily,
+            text: "", originalText: ""
+        )
         let element = ExcalidrawElement(base: base, kind: .text(props))
         store.modifyScene { $0.add(element) }
         selectedIDs = [element.id]
         return element.id
+    }
+
+    /// Apply a change to every selected text element's properties (recomputing
+    /// its size) as one undo step. Also used by the font controls.
+    func updateSelectedText(_ change: (inout TextProperties) -> Void) {
+        let textIDs = selectedElements.compactMap { element -> String? in
+            if case .text = element.kind { return element.id }
+            return nil
+        }
+        guard !textIDs.isEmpty else { return }
+        store.transaction { scene in
+            for id in textIDs {
+                guard let element = scene.element(id: id), var props = textProps(element) else { continue }
+                change(&props)
+                var updated = element
+                updated.kind = .text(props)
+                let lines = props.text.components(separatedBy: "\n")
+                updated.base.width = Double(lines.map(\.count).max() ?? 0) * props.fontSize * 0.6
+                updated.base.height = Double(max(1, lines.count)) * props.fontSize * props.lineHeight
+                scene.replace(updated)
+            }
+        }
+    }
+
+    private func textProps(_ element: ExcalidrawElement) -> TextProperties? {
+        if case let .text(props) = element.kind { return props }
+        return nil
     }
 
     /// Set a text element's content (committing one undo step), or remove it if

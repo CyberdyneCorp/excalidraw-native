@@ -21,6 +21,8 @@ public final class EditorModel: ObservableObject {
     @Published public var fillStyle: ExcalidrawModel.FillStyle = .hachure
     @Published public var strokeStyle: ExcalidrawModel.StrokeStyle = .solid
     @Published public var opacity: Double = 100
+    @Published public var fontFamily: Int = FontFamily.default
+    @Published public var fontSize: Double = 20
 
     /// On-canvas text editing state.
     @Published public var editingTextID: String?
@@ -151,6 +153,20 @@ public final class EditorModel: ObservableObject {
         opacity = value
         controller.currentItem.opacity = value
         applyToSelection { $0.base.opacity = value }
+    }
+
+    public func setFontFamily(_ family: Int) {
+        fontFamily = family
+        controller.currentItem.fontFamily = family
+        controller.updateSelectedText { $0.fontFamily = family }
+        revision += 1
+    }
+
+    public func setFontSize(_ size: Double) {
+        fontSize = size
+        controller.currentItem.fontSize = size
+        controller.updateSelectedText { $0.fontSize = size }
+        revision += 1
     }
 
     // MARK: Action passthroughs

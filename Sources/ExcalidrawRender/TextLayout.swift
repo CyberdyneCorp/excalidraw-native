@@ -36,13 +36,15 @@ public enum TextLayout {
         }
     }
 
-    /// Map an Excalidraw font-family id to a placeholder system font. Bundled
-    /// Excalifont/Virgil/etc. arrive in Phase 4.
+    /// Map an Excalidraw font-family id to the closest system font. The
+    /// hand-drawn families (Excalifont/Virgil/Nunito/etc.) map to a handwriting
+    /// system font for an Excalidraw-like feel; bundling the actual fonts with
+    /// matching metrics is a later refinement.
     static func fontName(for family: Int) -> String {
         switch family {
-        case FontFamily.helvetica, FontFamily.liberationSans: "Helvetica"
+        case FontFamily.helvetica, FontFamily.liberationSans, FontFamily.assistant: "Helvetica"
         case FontFamily.cascadia, FontFamily.comicShanns: "Menlo"
-        default: "Helvetica" // hand-drawn families fall back for now
+        default: "Bradley Hand" // Excalifont / Virgil / Nunito / LilitaOne → handwriting
         }
     }
 }

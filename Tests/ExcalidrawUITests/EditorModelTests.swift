@@ -31,6 +31,21 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.scene.visibleElements.first?.base.x, 10)
     }
 
+    func testFontControlsApplyToSelectedText() {
+        let m = EditorModel()
+        m.select(tool: .text)
+        m.pointer(.down, at: CGPoint(x: 20, y: 20))
+        m.editingText = "Hi"
+        m.commitText()
+        m.controller.selectAll()
+        m.setFontSize(36)
+        m.setFontFamily(FontFamily.cascadia)
+        guard case let .text(props) = m.controller.scene.visibleElements.first?.kind else { return XCTFail("text") }
+        XCTAssertEqual(props.fontSize, 36)
+        XCTAssertEqual(props.fontFamily, FontFamily.cascadia)
+        XCTAssertEqual(m.fontSize, 36)
+    }
+
     func testStrokeColorAndWidthApplyToSelection() {
         let m = EditorModel()
         m.select(tool: .rectangle)

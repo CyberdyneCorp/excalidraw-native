@@ -11,6 +11,8 @@ public struct CurrentItemProperties: Sendable {
     public var strokeStyle: StrokeStyle = .solid
     public var roughness: Double = 1
     public var opacity: Double = 100
+    public var fontFamily: Int = FontFamily.default
+    public var fontSize: Double = 20
 
     public init() {}
 
