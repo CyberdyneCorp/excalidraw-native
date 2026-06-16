@@ -51,6 +51,7 @@ public struct EditorView: View {
         .sheet(isPresented: $model.showCommandPalette) { commandPalette }
         .sheet(isPresented: $model.showLibrary) { librarySheet }
         .sheet(isPresented: $model.showChartInput) { chartInputSheet }
+        .sheet(isPresented: $model.showBenchmark) { RendererBenchmarkView() }
         .alert("Link", isPresented: $model.showLinkPrompt) {
             TextField("https://example.com", text: $model.linkText)
                 .accessibilityIdentifier("link-field")
@@ -419,6 +420,17 @@ public struct EditorView: View {
                 .accessibilityIdentifier("library")
             Button { model.showCommandPalette = true } label: { Image(systemName: "command") }
                 .accessibilityIdentifier("command-palette")
+            if model.isMetalAvailable {
+                Button { model.toggleRenderer() } label: {
+                    Image(systemName: model.rendererKind == .metal ? "cpu.fill" : "cpu")
+                        .foregroundStyle(model.rendererKind == .metal ? Color.accentColor : Color.primary)
+                }
+                .accessibilityIdentifier("renderer-toggle")
+                .accessibilityValue(model.rendererKind.label)
+            }
+            Button { model.showBenchmark = true } label: { Image(systemName: "gauge.with.dots.needle.bottom.50percent")
+            }
+            .accessibilityIdentifier("benchmark")
             Button { model.toggleTheme() } label: {
                 Image(systemName: model.theme == .dark ? "sun.max" : "moon")
             }.accessibilityIdentifier("theme-toggle")

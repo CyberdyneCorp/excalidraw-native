@@ -45,7 +45,7 @@ public enum ExcalidrawRender {
 /// `CGContext`. Assumes a y-down context (SwiftUI `Canvas` via `withCGContext`,
 /// a UIKit view, or `UIGraphicsImageRenderer`). Ports the flow of
 /// `packages/excalidraw/renderer/staticScene.ts`.
-public final class SceneRenderer {
+public final class SceneRenderer: SceneRendering {
     private let shapeCache: ShapeCache
     private let imageDecoder: ImageDecoder
 

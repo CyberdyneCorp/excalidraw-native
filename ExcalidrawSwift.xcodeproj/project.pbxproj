@@ -7,15 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E9B19E8A4CFD98A5E9E2F5E /* RendererComparisonBenchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2125AB83EBC165D109874A3 /* RendererComparisonBenchmark.swift */; };
 		2026115F4D2C83C335502889 /* RenderDeviceBenchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA5A5054011404F7553BA250 /* RenderDeviceBenchmark.swift */; };
 		212915047B3EAEF62F7A08DE /* ExcalidrawModel in Frameworks */ = {isa = PBXBuildFile; productRef = 391A0FD4CD1503BD9F5B0F4D /* ExcalidrawModel */; };
-		44FF15A5FE03D6CF8701EF7D /* ExcalidrawModel in Frameworks */ = {isa = PBXBuildFile; productRef = 95B98EBF809A2099C23DA7FB /* ExcalidrawModel */; };
+		44FF15A5FE03D6CF8701EF7D /* ExcalidrawMetal in Frameworks */ = {isa = PBXBuildFile; productRef = B5A02660761BA9EC62BEC27C /* ExcalidrawMetal */; };
 		49CB6D2DCBEB8E7D59713BBC /* ExcalidrawRender in Frameworks */ = {isa = PBXBuildFile; productRef = 7970334A2DD0CAB06316DA3C /* ExcalidrawRender */; };
 		838DFCC2CC809E301183E0EA /* ExcalidrawRender in Frameworks */ = {isa = PBXBuildFile; productRef = 149492DF6CA44C6B58BF54B1 /* ExcalidrawRender */; };
 		867447BF5E89709D59229A49 /* ExcalidrawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E1A9EAB0F2CFE2960655AE /* ExcalidrawApp.swift */; };
 		8F813DB42A25BD00D1EF2C87 /* ExcalidrawUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11ED78A939E9552DD837CAF1 /* ExcalidrawUI */; };
+		930073DE79E38D451390A449 /* ExcalidrawMath in Frameworks */ = {isa = PBXBuildFile; productRef = C07EB7C668076453F18C1B6B /* ExcalidrawMath */; };
 		BB2E451AC70807DB3531B87D /* sample.excalidraw in Resources */ = {isa = PBXBuildFile; fileRef = F04B3645468416DBC8FE24BA /* sample.excalidraw */; };
-		CE7076AD1F1138D2F3CCAD54 /* ExcalidrawMath in Frameworks */ = {isa = PBXBuildFile; productRef = C07EB7C668076453F18C1B6B /* ExcalidrawMath */; };
+		CE7076AD1F1138D2F3CCAD54 /* ExcalidrawModel in Frameworks */ = {isa = PBXBuildFile; productRef = 95B98EBF809A2099C23DA7FB /* ExcalidrawModel */; };
 		D24DD6A402E1EB6E7D7D3161 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */; };
 /* End PBXBuildFile section */
 
@@ -43,6 +45,7 @@
 		3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ExcalidrawApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ExcalidrawAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2125AB83EBC165D109874A3 /* RendererComparisonBenchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererComparisonBenchmark.swift; sourceTree = "<group>"; };
 		F04B3645468416DBC8FE24BA /* sample.excalidraw */ = {isa = PBXFileReference; path = sample.excalidraw; sourceTree = "<group>"; };
 		FA5A5054011404F7553BA250 /* RenderDeviceBenchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDeviceBenchmark.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -53,8 +56,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				49CB6D2DCBEB8E7D59713BBC /* ExcalidrawRender in Frameworks */,
-				44FF15A5FE03D6CF8701EF7D /* ExcalidrawModel in Frameworks */,
-				CE7076AD1F1138D2F3CCAD54 /* ExcalidrawMath in Frameworks */,
+				44FF15A5FE03D6CF8701EF7D /* ExcalidrawMetal in Frameworks */,
+				CE7076AD1F1138D2F3CCAD54 /* ExcalidrawModel in Frameworks */,
+				930073DE79E38D451390A449 /* ExcalidrawMath in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				FA5A5054011404F7553BA250 /* RenderDeviceBenchmark.swift */,
+				D2125AB83EBC165D109874A3 /* RendererComparisonBenchmark.swift */,
 			);
 			path = AppBenchmarks;
 			sourceTree = "<group>";
@@ -191,6 +196,7 @@
 			name = ExcalidrawAppBenchmarks;
 			packageProductDependencies = (
 				7970334A2DD0CAB06316DA3C /* ExcalidrawRender */,
+				B5A02660761BA9EC62BEC27C /* ExcalidrawMetal */,
 				95B98EBF809A2099C23DA7FB /* ExcalidrawModel */,
 				C07EB7C668076453F18C1B6B /* ExcalidrawMath */,
 			);
@@ -279,6 +285,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2026115F4D2C83C335502889 /* RenderDeviceBenchmark.swift in Sources */,
+				1E9B19E8A4CFD98A5E9E2F5E /* RendererComparisonBenchmark.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -615,6 +622,10 @@
 		95B98EBF809A2099C23DA7FB /* ExcalidrawModel */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ExcalidrawModel;
+		};
+		B5A02660761BA9EC62BEC27C /* ExcalidrawMetal */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ExcalidrawMetal;
 		};
 		C07EB7C668076453F18C1B6B /* ExcalidrawMath */ = {
 			isa = XCSwiftPackageProductDependency;

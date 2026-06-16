@@ -74,6 +74,8 @@ targets:
       - package: ExcalidrawSwift
         product: ExcalidrawRender
       - package: ExcalidrawSwift
+        product: ExcalidrawMetal
+      - package: ExcalidrawSwift
         product: ExcalidrawModel
       - package: ExcalidrawSwift
         product: ExcalidrawMath

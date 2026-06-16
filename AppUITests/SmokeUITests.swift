@@ -124,4 +124,68 @@ final class SmokeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
         XCTAssertTrue(canvas.exists)
     }
+
+    func testMetalRendererDrawMoveAndZoom() throws {
+        // Switch to the Metal (GPU) renderer, then exercise the same draw/move/
+        // zoom paths to make sure the GPU backend renders without crashing or
+        // garbling. The toggle only exists when Metal is supported.
+        let toggle = app.buttons["renderer-toggle"]
+        guard toggle.waitForExistence(timeout: 5) else {
+            throw XCTSkip("Metal renderer unavailable on this device")
+        }
+        toggle.tap()
+
+        // Shapes that go through GPU tessellation (rect, ellipse, arrow).
+        tap("tool-rectangle")
+        drag(CGVector(dx: 0.25, dy: 0.25), CGVector(dx: 0.5, dy: 0.45))
+        tap("tool-ellipse")
+        drag(CGVector(dx: 0.55, dy: 0.25), CGVector(dx: 0.75, dy: 0.45))
+        tap("tool-arrow")
+        drag(CGVector(dx: 0.3, dy: 0.6), CGVector(dx: 0.7, dy: 0.6))
+
+        // Move a shape (layered render under Metal) and zoom (crisp re-render).
+        tap("tool-selection")
+        drag(CGVector(dx: 0.3, dy: 0.35), CGVector(dx: 0.45, dy: 0.5))
+        canvas.pinch(withScale: 2.2, velocity: 1.4) // zoom in — must stay crisp
+        canvas.pinch(withScale: 0.5, velocity: -1.4) // zoom out
+
+        // Export still works with the GPU backend active.
+        app.buttons["export"].tap()
+        XCTAssertTrue(app.staticTexts["exported-confirmation"].waitForExistence(timeout: 5))
+
+        // Switch back to Core Graphics and confirm the app is still alive.
+        toggle.tap()
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(canvas.exists)
+    }
+
+    func testRendererBenchmarkScreenShowsResults() {
+        // Open the on-screen renderer benchmark. It defaults to Live mode, which
+        // renders the moving stress scene on screen with a live FPS readout.
+        app.buttons["benchmark"].tap()
+        XCTAssertTrue(app.staticTexts["FPS"].waitForExistence(timeout: 5), "live readout missing")
+        // Let a few animated frames render, then capture what's on screen.
+        sleep(2)
+        let live = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        live.name = "renderer-benchmark-live"
+        live.lifetime = .keepAlways
+        add(live)
+
+        // Switch to the Table mode and run the headless comparison.
+        app.segmentedControls["benchmark-mode"].buttons["Table"].tap()
+        let run = app.buttons["benchmark-run"]
+        XCTAssertTrue(run.waitForExistence(timeout: 5))
+        run.tap()
+        let firstRow = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'benchmark-row-'")
+        ).firstMatch
+        XCTAssertTrue(firstRow.waitForExistence(timeout: 30), "benchmark produced no result rows")
+        let table = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        table.name = "renderer-benchmark-table"
+        table.lifetime = .keepAlways
+        add(table)
+
+        app.buttons["benchmark-done"].tap()
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+    }
 }

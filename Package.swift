@@ -19,6 +19,7 @@ let package = Package(
         .library(name: "RoughKit", targets: ["RoughKit"]),
         .library(name: "FreehandKit", targets: ["FreehandKit"]),
         .library(name: "ExcalidrawRender", targets: ["ExcalidrawRender"]),
+        .library(name: "ExcalidrawMetal", targets: ["ExcalidrawMetal"]),
         .library(name: "ExcalidrawEditor", targets: ["ExcalidrawEditor"]),
         .library(name: "ExcalidrawUI", targets: ["ExcalidrawUI"])
     ],
@@ -41,6 +42,13 @@ let package = Package(
             dependencies: ["ExcalidrawModel", "ExcalidrawGeometry", "RoughKit", "FreehandKit"]
         ),
 
+        // MARK: GPU renderer (Metal) — alternative backend behind `SceneRendering`
+
+        .target(
+            name: "ExcalidrawMetal",
+            dependencies: ["ExcalidrawModel", "ExcalidrawMath", "ExcalidrawGeometry", "ExcalidrawRender", "RoughKit"]
+        ),
+
         // MARK: Editor logic (pure, testable — no UIKit)
 
         .target(
@@ -50,7 +58,7 @@ let package = Package(
 
         // MARK: UI layer
 
-        .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender", "ExcalidrawEditor"]),
+        .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender", "ExcalidrawEditor", "ExcalidrawMetal"]),
 
         // MARK: Tests (one per library)
 
@@ -65,6 +73,7 @@ let package = Package(
             // treating them as unhandled resources.
             exclude: ["Golden"]
         ),
+        .testTarget(name: "ExcalidrawMetalTests", dependencies: ["ExcalidrawMetal"]),
         .testTarget(name: "ExcalidrawEditorTests", dependencies: ["ExcalidrawEditor"]),
         .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"])
     ],
