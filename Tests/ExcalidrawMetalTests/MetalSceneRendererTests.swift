@@ -141,6 +141,31 @@ final class MetalSceneRendererTests: XCTestCase {
         XCTAssertLessThanOrEqual(warm.geometryMs, cold.geometryMs + 1.0)
     }
 
+    func testRenderDirectFrameRunsTheGPUPass() throws {
+        guard let metal = MetalSceneRenderer() else {
+            throw XCTSkip("No Metal device on this host")
+        }
+        let scene = shapesScene()
+        let ran = metal.renderDirectFrame(
+            scene: scene, viewport: Viewport(), size: size, theme: .light,
+            pixelWidth: Int(size.width), pixelHeight: Int(size.height)
+        )
+        XCTAssertTrue(ran, "the no-read-back GPU pass should run when there is content")
+    }
+
+    func testRenderDirectFrameWithEmptySceneStillRunsForBackground() throws {
+        guard let metal = MetalSceneRenderer() else {
+            throw XCTSkip("No Metal device on this host")
+        }
+        // No tessellated elements → no geometry, but the background clear is
+        // opaque, so the direct pass still runs.
+        let ran = metal.renderDirectFrame(
+            scene: Scene(), viewport: Viewport(), size: size, theme: .light,
+            pixelWidth: Int(size.width), pixelHeight: Int(size.height)
+        )
+        XCTAssertTrue(ran)
+    }
+
     // MARK: Helpers
 
     private func render(_ scene: Scene, viewport: Viewport, with renderer: SceneRendering) -> [UInt8] {

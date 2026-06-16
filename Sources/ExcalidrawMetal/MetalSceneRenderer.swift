@@ -5,6 +5,7 @@ import ExcalidrawModel
 import ExcalidrawRender
 import Foundation
 import Metal
+import QuartzCore
 
 /// A Metal-backed `SceneRendering`. Rough shapes (rectangle, diamond, ellipse,
 /// line, arrow) are tessellated and rasterized on the GPU with 4× multisampling;
@@ -81,6 +82,48 @@ public final class MetalSceneRenderer: SceneRendering {
         cgRenderer.render(
             scene, in: ctx, viewport: viewport, size: size, theme: theme,
             clip: clip, skipping: skipping.union(geometry.handledIDs), fillBackground: false
+        )
+    }
+
+    // MARK: Direct-to-drawable (no read-back)
+
+    /// Render one frame's GPU geometry straight into a Metal layer drawable and
+    /// present it — no texture read-back, no `CGContext`, no `CGImage`. Text,
+    /// images and other non-tessellated content are not drawn here (the GPU-only
+    /// path is for the renderer benchmark / GPU-content scenes). Mirrors the
+    /// gridless background-as-clear path of `render`.
+    public func renderToDrawable(
+        _ drawable: CAMetalDrawable, scene: Scene, viewport: Viewport, size: CGSize, theme: Theme = .light
+    ) {
+        let geometry = SceneGeometry(
+            scene: scene, theme: theme,
+            visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
+            shapeCache: shapeCache, geometryCache: geometryCache
+        )
+        gpu.renderToDrawable(
+            drawable, vertices: geometry.vertices,
+            transform: Self.clipTransform(viewport: viewport, size: size),
+            clearColor: Self.backgroundClear(scene, theme: theme)
+        )
+    }
+
+    /// The GPU cost of one direct frame (geometry + clear + draw, no read-back),
+    /// for the benchmark's `metal-direct` measurement. Returns whether it ran.
+    @discardableResult
+    public func renderDirectFrame(
+        scene: Scene, viewport: Viewport, size: CGSize, theme: Theme,
+        pixelWidth: Int, pixelHeight: Int
+    ) -> Bool {
+        let geometry = SceneGeometry(
+            scene: scene, theme: theme,
+            visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
+            shapeCache: shapeCache, geometryCache: geometryCache
+        )
+        return gpu.renderNoReadback(
+            vertices: geometry.vertices,
+            transform: Self.clipTransform(viewport: viewport, size: size),
+            clearColor: Self.backgroundClear(scene, theme: theme),
+            pixelWidth: pixelWidth, pixelHeight: pixelHeight
         )
     }
 

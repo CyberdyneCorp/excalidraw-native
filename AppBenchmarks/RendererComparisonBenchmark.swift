@@ -85,12 +85,12 @@ final class RendererComparisonBenchmark: XCTestCase {
         return Double(ink) / Double(total)
     }
 
-    /// Head-to-head: CPU (Core Graphics) vs GPU (Metal) wall-clock per frame on
-    /// the same scenes, plus a Metal phase breakdown (geometry / background / GPU
-    /// / overlay) so the cost split is visible. `shapes-only` is the Metal best
-    /// case (every element is GPU-tessellated); `mixed` adds freedraw, which the
-    /// Metal path routes back to Core Graphics. Asserts only that both backends
-    /// paint the scene — never a wall-clock target — so it can't flake.
+    /// Head-to-head per frame on the same scenes: CPU (Core Graphics) vs Metal
+    /// (read-back path that composites into a CGContext) vs Metal-direct (the GPU
+    /// frame with no read-back / CG passes — what a present-to-drawable costs).
+    /// `shapes-only` is rough shapes; `mixed` adds freedraw (also GPU-tessellated
+    /// now). Asserts only that both backends paint the scene — never a wall-clock
+    /// target — so it can't flake.
     func testMetalVsCoreGraphicsOnDevice() throws {
         guard let metal = MetalSceneRenderer() else {
             throw XCTSkip("No Metal device on this host")
@@ -111,15 +111,25 @@ final class RendererComparisonBenchmark: XCTestCase {
                 let metalCtx = context()
                 metal.render(scene, in: metalCtx, viewport: viewport, size: size) // warm shader + caches
                 let metalMs = milliseconds(5) { metal.render(scene, in: metalCtx, viewport: viewport, size: size) }
-                let t = metal.renderTimed(scene, in: context(), viewport: viewport, size: size)
+
+                // Direct-to-drawable cost: GPU frame with no read-back / CG passes.
+                metal.renderDirectFrame(
+                    scene: scene, viewport: viewport, size: size, theme: .light,
+                    pixelWidth: width, pixelHeight: height
+                )
+                let directMs = milliseconds(5) {
+                    metal.renderDirectFrame(
+                        scene: scene, viewport: viewport, size: size, theme: .light,
+                        pixelWidth: width, pixelHeight: height
+                    )
+                }
 
                 XCTAssertGreaterThan(inkFraction(cgCtx), 0.01, "\(label) n=\(count): CG drew nothing")
                 XCTAssertGreaterThan(inkFraction(metalCtx), 0.01, "\(label) n=\(count): Metal drew nothing")
                 print(String(
-                    format: "RENDERER BENCH %-11@ n=%4d  cpu=%6.1f ms  metal=%6.1f ms  (%.2fx)  "
-                        + "[geom=%.1f bg=%.1f gpu=%.1f overlay=%.1f]",
-                    label as NSString, count, cgMs, metalMs, cgMs / metalMs,
-                    t.geometryMs, t.backgroundMs, t.gpuMs, t.overlayMs
+                    format: "RENDERER BENCH %-11@ n=%4d  cpu=%6.1f ms  metal=%6.1f ms (%.2fx)  "
+                        + "metal-direct=%6.1f ms (%.2fx)",
+                    label as NSString, count, cgMs, metalMs, cgMs / metalMs, directMs, cgMs / directMs
                 ))
             }
         }
