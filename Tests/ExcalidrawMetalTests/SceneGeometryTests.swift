@@ -116,6 +116,16 @@ final class SceneGeometryTests: XCTestCase {
         XCTAssertNotEqual(bits(light.vertices), bits(dark.vertices))
     }
 
+    func testFreedrawIsTessellatedOnGPU() {
+        let pts = (0 ..< 30).map { Point(Double($0) * 3, Double(($0 * 7) % 40)) }
+        let pressures = [Double](repeating: 0.5, count: pts.count)
+        let free = FreedrawProperties(points: pts, pressures: pressures, simulatePressure: false)
+        var b = base("f", 0, 0, 90, 40); b.strokeColor = "#1e1e1e"
+        let g = geometry([ExcalidrawElement(base: b, kind: .freedraw(free))])
+        XCTAssertGreaterThan(g.triangleCount, 0, "freedraw outline must tessellate to triangles")
+        XCTAssertTrue(g.handledIDs.contains("f"), "freedraw is now GPU-handled, not in the CG overlay")
+    }
+
     func testLinePolygonIsTessellated() {
         let line = LinearProperties(points: [Point(0, 0), Point(100, 0), Point(100, 50)], polygon: true)
         let g = geometry([ExcalidrawElement(base: base("l", 0, 0, 100, 50), kind: .line(line))])

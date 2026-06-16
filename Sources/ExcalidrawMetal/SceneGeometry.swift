@@ -4,16 +4,18 @@ import ExcalidrawMath
 import ExcalidrawModel
 import ExcalidrawRender
 import Foundation
+import FreehandKit
 import RoughKit
 
 /// Turns a `Scene` into GPU-ready colored triangles, in scene coordinates.
 ///
-/// Only the hand-drawn rough shapes (rectangle, diamond, ellipse, line, arrow)
-/// are tessellated here — that is where the GPU pays off (many fill/stroke
-/// triangles). Text, images, frames, freedraw, embeddables and any frame-clipped
-/// child stay with the Core Graphics overlay pass, which already handles their
-/// typography, decoding and clipping correctly. `handledIDs` is exactly the set
-/// the overlay must skip so nothing is drawn twice.
+/// Tessellated here: the hand-drawn rough shapes (rectangle, diamond, ellipse,
+/// line, arrow) and freedraw strokes (from their perfect-freehand outline) —
+/// that is where the GPU pays off (many fill/stroke triangles). Text, images,
+/// frames, embeddables and any frame-clipped child stay with the Core Graphics
+/// overlay pass, which already handles their typography, decoding and clipping
+/// correctly. `handledIDs` is exactly the set the overlay must skip so nothing
+/// is drawn twice.
 public struct SceneGeometry {
     /// Interleaved vertex data: `[x, y, packedRGBA]` per vertex (3 floats),
     /// three vertices per triangle, in scene coordinates. The color is an RGBA8
@@ -63,7 +65,10 @@ public struct SceneGeometry {
 
         for element in candidates
             where !skipping.contains(element.id) && isTessellatable(element) {
-            guard let drawable = shapeCache.drawable(for: element) else { continue }
+            // Rough shapes need a drawable; freedraw is tessellated from its
+            // perfect-freehand outline and has none.
+            let drawable = Self.isFreedraw(element) ? nil : shapeCache.drawable(for: element)
+            if !Self.isFreedraw(element), drawable == nil { continue }
             let verts = geometryCache?.vertices(for: element, theme: theme) {
                 Self.elementVertices(element: element, drawable: drawable, theme: theme)
             } ?? Self.elementVertices(element: element, drawable: drawable, theme: theme)
@@ -72,25 +77,35 @@ public struct SceneGeometry {
         }
     }
 
-    /// GPU-eligible elements: rough shapes with a solid stroke and no frame
-    /// clipping. Everything else (text/image/freedraw/frame/embeddable, dashed
+    /// GPU-eligible elements: rough shapes and freedraw with a solid stroke and
+    /// no frame clipping. Everything else (text/image/frame/embeddable, dashed
     /// or dotted strokes, framed children) falls through to Core Graphics.
     private func isTessellatable(_ element: ExcalidrawElement) -> Bool {
         guard element.base.frameId == nil, element.base.strokeStyle == .solid else { return false }
         switch element.kind {
-        case .rectangle, .diamond, .ellipse, .line, .arrow: return true
+        case .rectangle, .diamond, .ellipse, .line, .arrow, .freedraw: return true
         default: return false
         }
     }
 
-    /// Tessellate a single element into interleaved `[x, y, r, g, b, a]` floats
+    private static func isFreedraw(_ element: ExcalidrawElement) -> Bool {
+        if case .freedraw = element.kind { return true }
+        return false
+    }
+
+    /// Tessellate a single element into interleaved packed-color vertex floats
     /// in scene coordinates. Static and self-contained so a `GeometryCache` can
-    /// memoize the result per element.
-    static func elementVertices(element: ExcalidrawElement, drawable: Drawable, theme: Theme) -> [Float] {
+    /// memoize the result per element. `drawable` is nil for freedraw.
+    static func elementVertices(element: ExcalidrawElement, drawable: Drawable?, theme: Theme) -> [Float] {
         let base = element.base
         let opacity = Float(base.opacity / 100)
         let transform = elementTransform(base)
         let strokeRGBA = rgba(base.strokeColor, opacity: opacity, theme: theme)
+
+        if case let .freedraw(props) = element.kind {
+            return freedrawVertices(props, base: base, color: strokeRGBA, transform: transform)
+        }
+        guard let drawable else { return [] }
         let fillRGBA = drawable.options.fill.flatMap { rgba($0, opacity: opacity, theme: theme) }
 
         var out: [Float] = []
@@ -129,6 +144,25 @@ public struct SceneGeometry {
         if case let .arrow(props) = element.kind, let strokeRGBA {
             appendArrowheads(props, base: base, color: strokeRGBA, transform: transform, into: &out)
         }
+        return out
+    }
+
+    // MARK: - Freedraw (mirrors SceneRenderer.drawFreedraw)
+
+    /// Tessellate a freedraw stroke: build the perfect-freehand outline (a
+    /// closed filled polygon) and triangulate it, filled with the stroke color.
+    private static func freedrawVertices(
+        _ props: FreedrawProperties, base: BaseProperties, color: SIMDColor?, transform: (Point) -> Point
+    ) -> [Float] {
+        guard let color, !props.points.isEmpty else { return [] }
+        let inputs = props.points.enumerated().map { index, p in
+            FreehandPoint(x: p.x, y: p.y, pressure: index < props.pressures.count ? props.pressures[index] : 0.5)
+        }
+        let options = FreehandOptions(strokeWidth: base.strokeWidth, simulatePressure: props.simulatePressure)
+        let outline = FreehandKit.strokeOutline(inputs, options: options)
+        guard outline.count > 2 else { return [] }
+        var out: [Float] = []
+        emit(Tessellator.fillTriangles(outline), color: color, transform: transform, into: &out)
         return out
     }
 

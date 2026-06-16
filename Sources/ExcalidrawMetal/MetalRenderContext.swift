@@ -84,31 +84,40 @@
             return try? device.makeRenderPipelineState(descriptor: descriptor)
         }
 
-        /// Rasterize `vertices` (interleaved `[x, y, r, g, b, a]`) into a
-        /// `pixelWidth × pixelHeight` RGBA image. Returns `nil` on any GPU failure.
-        func image(vertices: [Float], transform: Transform, pixelWidth: Int, pixelHeight: Int) -> CGImage? {
-            // 3 floats per vertex (x, y, packed-RGBA8); 3 vertices per triangle.
-            guard pixelWidth > 0, pixelHeight > 0, vertices.count >= 9 else { return nil }
+        /// Rasterize `vertices` (3 floats/vertex: x, y, packed-RGBA8) into a
+        /// `pixelWidth × pixelHeight` RGBA image over `clearColor`. Returns `nil`
+        /// on any GPU failure, or when there's nothing to draw (no triangles and
+        /// a transparent clear).
+        func image(
+            vertices: [Float], transform: Transform, clearColor: MTLClearColor,
+            pixelWidth: Int, pixelHeight: Int
+        ) -> CGImage? {
+            guard pixelWidth > 0, pixelHeight > 0 else { return nil }
             let vertexCount = vertices.count / 3
+            // Nothing to paint: no triangles and a fully transparent background.
+            guard vertexCount >= 3 || clearColor.alpha > 0 else { return nil }
 
-            guard let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight),
-                  let vertexBuffer = uploadVertices(vertices) else { return nil }
+            guard let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
+                return nil
+            }
 
             let pass = MTLRenderPassDescriptor()
             pass.colorAttachments[0].texture = msaaTexture
             pass.colorAttachments[0].resolveTexture = resolveTexture
             pass.colorAttachments[0].loadAction = .clear
             pass.colorAttachments[0].storeAction = .multisampleResolve
-            pass.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+            pass.colorAttachments[0].clearColor = clearColor
 
             guard let commandBuffer = queue.makeCommandBuffer(),
                   let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return nil }
 
-            var transform = transform
-            encoder.setRenderPipelineState(pipeline)
-            encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-            encoder.setVertexBytes(&transform, length: MemoryLayout<Transform>.stride, index: 1)
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+            if vertexCount >= 3, let vertexBuffer = uploadVertices(vertices) {
+                var transform = transform
+                encoder.setRenderPipelineState(pipeline)
+                encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+                encoder.setVertexBytes(&transform, length: MemoryLayout<Transform>.stride, index: 1)
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+            }
             encoder.endEncoding()
             commandBuffer.commit()
             commandBuffer.waitUntilCompleted()
@@ -142,7 +151,7 @@
             }
             guard let vertexBuffer else { return nil }
             vertices.withUnsafeBytes { src in
-                memcpy(vertexBuffer.contents(), src.baseAddress!, byteLength)
+                _ = memcpy(vertexBuffer.contents(), src.baseAddress!, byteLength)
             }
             return vertexBuffer
         }
