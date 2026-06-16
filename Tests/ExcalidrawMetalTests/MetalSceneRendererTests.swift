@@ -43,7 +43,7 @@ final class MetalSceneRendererTests: XCTestCase {
         XCTAssertEqual(geometry.vertices.count % 9, 0) // 3 floats/vertex × 3 vertices
     }
 
-    func testGeometrySkipsFramedAndDashedElements() {
+    func testGeometryHandlesDashedButSkipsFramed() {
         var dashed = base("d", 10, 10, 80, 40); dashed.strokeStyle = .dashed
         var framed = base("f", 10, 60, 80, 40); framed.frameId = "frame-1"
         let scene = Scene(elements: [
@@ -51,8 +51,26 @@ final class MetalSceneRendererTests: XCTestCase {
             ExcalidrawElement(base: framed, kind: .rectangle)
         ])
         let geometry = SceneGeometry(scene: scene, theme: .light)
-        XCTAssertTrue(geometry.handledIDs.isEmpty, "dashed + framed elements stay with Core Graphics")
-        XCTAssertTrue(geometry.isEmpty)
+        // Dashed strokes are now GPU-tessellated (dash-split); framed children
+        // still clip via Core Graphics.
+        XCTAssertTrue(geometry.handledIDs.contains("d"))
+        XCTAssertFalse(geometry.handledIDs.contains("f"))
+        XCTAssertGreaterThan(geometry.triangleCount, 0)
+    }
+
+    func testDashedStrokeGeometryDiffersFromSolid() {
+        var solid = base("s", 0, 0, 120, 80); solid.strokeStyle = .solid
+        var dashed = base("d", 0, 0, 120, 80); dashed.strokeStyle = .dashed
+        let solidGeo = SceneGeometry(scene: Scene(elements: [
+            ExcalidrawElement(base: solid, kind: .rectangle)
+        ]), theme: .light)
+        let dashedGeo = SceneGeometry(scene: Scene(elements: [
+            ExcalidrawElement(base: dashed, kind: .rectangle)
+        ]), theme: .light)
+        // Dash-splitting changes the outline geometry (broken into runs, each
+        // round-capped), so the two differ.
+        XCTAssertGreaterThan(dashedGeo.triangleCount, 0)
+        XCTAssertNotEqual(dashedGeo.triangleCount, solidGeo.triangleCount)
     }
 
     func testGeometryRespectsSkippingSet() {

@@ -21,15 +21,37 @@
             var dy: Float
         }
 
+        /// A frame's GPU geometry: colored triangles plus textured image quads,
+        /// executed in `commands` (z) order.
+        struct Frame {
+            var coloredVertices: [Float] // 3 floats/vertex: x, y, packed color
+            var imageVertices: [Float] // 4 floats/vertex: x, y, u, v (6 per image)
+            var commands: [Command]
+            var transform: Transform
+            var clearColor: MTLClearColor
+        }
+
+        enum Command {
+            case triangles(start: Int, count: Int) // vertex range in coloredVertices
+            case image(vertexStart: Int, texture: MTLTexture, opacity: Float)
+        }
+
         private let device: MTLDevice
         private let queue: MTLCommandQueue
         private let pipeline: MTLRenderPipelineState
-        /// Pipeline + format for presenting to a `CAMetalLayer` drawable, which
+        private let imagePipeline: MTLRenderPipelineState
+        /// Pipelines + format for presenting to a `CAMetalLayer` drawable, which
         /// only supports `bgra8Unorm` (not the off-screen `rgba8Unorm`).
         private let drawablePipeline: MTLRenderPipelineState
+        private let drawableImagePipeline: MTLRenderPipelineState
         private let sampleCount = 4
         private let pixelFormat: MTLPixelFormat = .rgba8Unorm
         private let drawablePixelFormat: MTLPixelFormat = .bgra8Unorm
+
+        /// The Metal device (for building the image texture cache).
+        var metalDevice: MTLDevice {
+            device
+        }
 
         // Persistent GPU resources reused across frames: the MSAA + resolve
         // render targets (rebuilt only when the pixel size changes) and a
@@ -45,19 +67,39 @@
         // the drawable's own texture, not our cached resolve).
         private var drawableMSAATexture: MTLTexture?
         private var drawableMSAASize: (width: Int, height: Int)?
+        private var imageVertexBuffer: MTLBuffer?
 
         init?() {
             guard let device = MTLCreateSystemDefaultDevice(),
                   let queue = device.makeCommandQueue() else { return nil }
-            guard let pipeline = Self.makePipeline(device: device, sampleCount: 4, pixelFormat: .rgba8Unorm),
-                  let drawablePipeline = Self.makePipeline(device: device, sampleCount: 4, pixelFormat: .bgra8Unorm)
+            guard
+                let pipeline = Self.makePipeline(device: device, format: .rgba8Unorm, fragment: "scene_fragment"),
+                let imagePipeline = Self.makePipeline(
+                    device: device,
+                    format: .rgba8Unorm,
+                    fragment: "image_fragment",
+                    vertex: "image_vertex"
+                ),
+                let drawablePipeline = Self.makePipeline(
+                    device: device,
+                    format: .bgra8Unorm,
+                    fragment: "scene_fragment"
+                ),
+                let drawableImagePipeline = Self.makePipeline(
+                    device: device,
+                    format: .bgra8Unorm,
+                    fragment: "image_fragment",
+                    vertex: "image_vertex"
+                )
             else {
                 return nil
             }
             self.device = device
             self.queue = queue
             self.pipeline = pipeline
+            self.imagePipeline = imagePipeline
             self.drawablePipeline = drawablePipeline
+            self.drawableImagePipeline = drawableImagePipeline
         }
 
         /// Whether a usable Metal device exists on this host without building a
@@ -67,7 +109,7 @@
         }
 
         private static func makePipeline(
-            device: MTLDevice, sampleCount: Int, pixelFormat: MTLPixelFormat
+            device: MTLDevice, format: MTLPixelFormat, fragment: String, vertex: String = "scene_vertex"
         ) -> MTLRenderPipelineState? {
             let library: MTLLibrary
             do {
@@ -75,15 +117,15 @@
             } catch {
                 return nil
             }
-            guard let vertexFn = library.makeFunction(name: "scene_vertex"),
-                  let fragmentFn = library.makeFunction(name: "scene_fragment") else { return nil }
+            guard let vertexFn = library.makeFunction(name: vertex),
+                  let fragmentFn = library.makeFunction(name: fragment) else { return nil }
 
             let descriptor = MTLRenderPipelineDescriptor()
             descriptor.vertexFunction = vertexFn
             descriptor.fragmentFunction = fragmentFn
-            descriptor.rasterSampleCount = sampleCount
+            descriptor.rasterSampleCount = 4
             let attachment = descriptor.colorAttachments[0]!
-            attachment.pixelFormat = pixelFormat
+            attachment.pixelFormat = format
             // The vertex shader emits premultiplied color, so source-over uses a
             // source factor of `.one` (alpha is already folded into rgb).
             attachment.isBlendingEnabled = true
@@ -102,16 +144,13 @@
         /// a transparent clear). This is the read-back path: it copies the GPU
         /// result back to the CPU as a `CGImage` (used by the `SceneRendering`
         /// protocol path that composites into a `CGContext`).
-        func image(
-            vertices: [Float], transform: Transform, clearColor: MTLClearColor,
-            pixelWidth: Int, pixelHeight: Int
-        ) -> CGImage? {
-            guard hasContent(vertices, clearColor), pixelWidth > 0, pixelHeight > 0,
+        func image(frame: Frame, pixelWidth: Int, pixelHeight: Int) -> CGImage? {
+            guard hasContent(frame), pixelWidth > 0, pixelHeight > 0,
                   let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
                 return nil
             }
             runPass(
-                pipeline: pipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                colorPipeline: pipeline, imagePipeline: imagePipeline, frame: frame,
                 msaa: msaaTexture, resolve: resolveTexture, present: nil, wait: true
             )
             return makeImage(from: resolveTexture, width: pixelWidth, height: pixelHeight)
@@ -121,16 +160,13 @@
         /// but skip the read-back/`CGImage` round-trip entirely. Returns whether
         /// the GPU pass ran. This is what a present-to-drawable frame costs, minus
         /// the (async) present — used to measure the read-back savings headlessly.
-        func renderNoReadback(
-            vertices: [Float], transform: Transform, clearColor: MTLClearColor,
-            pixelWidth: Int, pixelHeight: Int
-        ) -> Bool {
-            guard hasContent(vertices, clearColor), pixelWidth > 0, pixelHeight > 0,
+        func renderNoReadback(frame: Frame, pixelWidth: Int, pixelHeight: Int) -> Bool {
+            guard hasContent(frame), pixelWidth > 0, pixelHeight > 0,
                   let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
                 return false
             }
             runPass(
-                pipeline: pipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                colorPipeline: pipeline, imagePipeline: imagePipeline, frame: frame,
                 msaa: msaaTexture, resolve: resolveTexture, present: nil, wait: true
             )
             return true
@@ -140,46 +176,58 @@
         /// read-back, no `CGContext` — the GPU output goes straight to the
         /// display. `present`/`commit` are async (no `waitUntilCompleted`), so
         /// frames pipeline.
-        func renderToDrawable(
-            _ drawable: CAMetalDrawable, vertices: [Float], transform: Transform, clearColor: MTLClearColor
-        ) {
+        func renderToDrawable(_ drawable: CAMetalDrawable, frame: Frame) {
             let resolve = drawable.texture
             guard let msaa = drawableMSAA(width: resolve.width, height: resolve.height) else { return }
             runPass(
-                pipeline: drawablePipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                colorPipeline: drawablePipeline, imagePipeline: drawableImagePipeline, frame: frame,
                 msaa: msaa, resolve: resolve, present: drawable, wait: false
             )
         }
 
-        private func hasContent(_ vertices: [Float], _ clearColor: MTLClearColor) -> Bool {
-            vertices.count / 3 >= 3 || clearColor.alpha > 0
+        private func hasContent(_ frame: Frame) -> Bool {
+            !frame.commands.isEmpty || frame.clearColor.alpha > 0
         }
 
-        /// Encode one MSAA render pass (clear + triangles), resolving into
-        /// `resolve`. Optionally presents `present` and/or blocks until the GPU
-        /// finishes.
+        /// Encode one MSAA render pass: clear, then execute the frame's draw
+        /// commands (colored-triangle runs and textured image quads) in order,
+        /// resolving into `resolve`. Optionally presents and/or blocks.
         private func runPass(
-            pipeline: MTLRenderPipelineState, vertices: [Float], transform: Transform,
-            clearColor: MTLClearColor, msaa: MTLTexture, resolve: MTLTexture,
-            present: CAMetalDrawable?, wait: Bool
+            colorPipeline: MTLRenderPipelineState, imagePipeline: MTLRenderPipelineState,
+            frame: Frame, msaa: MTLTexture, resolve: MTLTexture, present: CAMetalDrawable?, wait: Bool
         ) {
             let pass = MTLRenderPassDescriptor()
             pass.colorAttachments[0].texture = msaa
             pass.colorAttachments[0].resolveTexture = resolve
             pass.colorAttachments[0].loadAction = .clear
             pass.colorAttachments[0].storeAction = .multisampleResolve
-            pass.colorAttachments[0].clearColor = clearColor
+            pass.colorAttachments[0].clearColor = frame.clearColor
 
             guard let commandBuffer = queue.makeCommandBuffer(),
                   let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
 
-            let vertexCount = vertices.count / 3
-            if vertexCount >= 3, let vertexBuffer = uploadVertices(vertices) {
-                var transform = transform
-                encoder.setRenderPipelineState(pipeline)
-                encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-                encoder.setVertexBytes(&transform, length: MemoryLayout<Transform>.stride, index: 1)
-                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
+            var transform = frame.transform
+            let colorBuffer = frame.coloredVertices.isEmpty ? nil : uploadVertices(frame.coloredVertices)
+            let imageBuffer = frame.imageVertices.isEmpty ? nil : uploadImageVertices(frame.imageVertices)
+
+            for command in frame.commands {
+                switch command {
+                case let .triangles(start, count):
+                    guard let colorBuffer, count >= 3 else { continue }
+                    encoder.setRenderPipelineState(colorPipeline)
+                    encoder.setVertexBuffer(colorBuffer, offset: 0, index: 0)
+                    encoder.setVertexBytes(&transform, length: MemoryLayout<Transform>.stride, index: 1)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: start, vertexCount: count)
+                case let .image(vertexStart, texture, opacity):
+                    guard let imageBuffer else { continue }
+                    var opacity = opacity
+                    encoder.setRenderPipelineState(imagePipeline)
+                    encoder.setVertexBuffer(imageBuffer, offset: 0, index: 0)
+                    encoder.setVertexBytes(&transform, length: MemoryLayout<Transform>.stride, index: 1)
+                    encoder.setFragmentTexture(texture, index: 0)
+                    encoder.setFragmentBytes(&opacity, length: MemoryLayout<Float>.stride, index: 0)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: vertexStart, vertexCount: 6)
+                }
             }
             encoder.endEncoding()
             if let present { commandBuffer.present(present) }
@@ -230,6 +278,22 @@
                 _ = memcpy(vertexBuffer.contents(), src.baseAddress!, byteLength)
             }
             return vertexBuffer
+        }
+
+        /// Copy image-quad vertices (x, y, u, v) into a separate reusable buffer.
+        private func uploadImageVertices(_ vertices: [Float]) -> MTLBuffer? {
+            let byteLength = vertices.count * MemoryLayout<Float>.stride
+            if imageVertexBuffer == nil || (imageVertexBuffer?.length ?? 0) < byteLength {
+                guard let buffer = device.makeBuffer(length: byteLength * 2, options: .storageModeShared) else {
+                    return nil
+                }
+                imageVertexBuffer = buffer
+            }
+            guard let imageVertexBuffer else { return nil }
+            vertices.withUnsafeBytes { src in
+                _ = memcpy(imageVertexBuffer.contents(), src.baseAddress!, byteLength)
+            }
+            return imageVertexBuffer
         }
 
         private func makeTexture(
@@ -316,6 +380,32 @@
 
     fragment float4 scene_fragment(VertexOut in [[stage_in]]) {
         return in.color;
+    }
+
+    struct ImageVertexOut {
+        float4 position [[position]];
+        float2 uv;
+    };
+
+    vertex ImageVertexOut image_vertex(uint vid [[vertex_id]],
+                                       const device float *verts [[buffer(0)]],
+                                       constant Transform &t [[buffer(1)]]) {
+        // 4 floats per vertex: x, y, u, v.
+        uint base = vid * 4u;
+        float2 p = float2(verts[base + 0u], verts[base + 1u]);
+        ImageVertexOut out;
+        out.position = float4(t.ax * p.x + t.bx, t.cy * p.y + t.dy, 0.0, 1.0);
+        out.uv = float2(verts[base + 2u], verts[base + 3u]);
+        return out;
+    }
+
+    fragment float4 image_fragment(ImageVertexOut in [[stage_in]],
+                                   texture2d<float> tex [[texture(0)]],
+                                   constant float &opacity [[buffer(0)]]) {
+        constexpr sampler s(filter::linear, address::clamp_to_edge);
+        // The texture is premultiplied (drawn into a premultipliedLast context);
+        // scaling the whole sample by opacity keeps it premultiplied.
+        return tex.sample(s, in.uv) * opacity;
     }
     """
 #endif

@@ -126,6 +126,52 @@ public enum Tessellator {
     /// Minimum turn (radians) at an interior vertex before a round join is added.
     private static let joinAngleThreshold = 18.0 * Double.pi / 180
 
+    /// Split a polyline into the "on" sub-polylines of a dash pattern. `pattern`
+    /// is `[on, off, on, off, …]` in the polyline's units (matching the CG
+    /// `setLineDash` lengths). Cuts segments at dash boundaries so each returned
+    /// piece can be stroke-tessellated as a solid run. An empty/odd-length or
+    /// non-positive pattern yields the whole polyline unchanged.
+    public static func dashSplit(_ polyline: [Point], pattern: [Double]) -> [[Point]] {
+        guard polyline.count >= 2, pattern.count >= 2, pattern.allSatisfy({ $0 >= 0 }),
+              pattern.reduce(0, +) > 0 else { return [polyline] }
+
+        var pieces: [[Point]] = []
+        var current: [Point] = []
+        var dashIndex = 0
+        var remaining = pattern[0]
+        var on = true // pattern starts with an "on" length
+        if on { current = [polyline[0]] }
+
+        for i in 0 ..< (polyline.count - 1) {
+            var a = polyline[i]
+            let b = polyline[i + 1]
+            var segLen = a.distance(to: b)
+            guard segLen > 1e-9 else { continue }
+            let dirX = (b.x - a.x) / segLen, dirY = (b.y - a.y) / segLen
+
+            while segLen > remaining {
+                // Reach the next dash boundary partway along the segment.
+                let cut = Point(a.x + dirX * remaining, a.y + dirY * remaining)
+                if on {
+                    current.append(cut)
+                    pieces.append(current)
+                    current = []
+                } else {
+                    current = [cut]
+                }
+                segLen -= remaining
+                a = cut
+                on.toggle()
+                dashIndex = (dashIndex + 1) % pattern.count
+                remaining = pattern[dashIndex]
+            }
+            remaining -= segLen
+            if on { current.append(b) }
+        }
+        if on, current.count >= 2 { pieces.append(current) }
+        return pieces
+    }
+
     private static func appendDisc(center: Point, radius: Double, segments: Int, into tris: inout Triangles) {
         guard segments >= 3, radius > 0 else { return }
         var prev = Point(center.x + radius, center.y)

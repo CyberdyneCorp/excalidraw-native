@@ -10,12 +10,11 @@ import RoughKit
 /// Turns a `Scene` into GPU-ready colored triangles, in scene coordinates.
 ///
 /// Tessellated here: the hand-drawn rough shapes (rectangle, diamond, ellipse,
-/// line, arrow) and freedraw strokes (from their perfect-freehand outline) —
-/// that is where the GPU pays off (many fill/stroke triangles). Text, images,
-/// frames, embeddables and any frame-clipped child stay with the Core Graphics
-/// overlay pass, which already handles their typography, decoding and clipping
-/// correctly. `handledIDs` is exactly the set the overlay must skip so nothing
-/// is drawn twice.
+/// line, arrow — solid, dashed or dotted), freedraw strokes (from their
+/// perfect-freehand outline), and images (as textured quads, via `imageDraws` +
+/// `drawCommands`). Text, frames, embeddables and any frame-clipped child stay
+/// with the Core Graphics overlay pass. `handledIDs` is exactly the set the
+/// overlay must skip so nothing is drawn twice.
 public struct SceneGeometry {
     /// Interleaved vertex data: `[x, y, packedRGBA]` per vertex (3 floats),
     /// three vertices per triangle, in scene coordinates. The color is an RGBA8
@@ -24,9 +23,38 @@ public struct SceneGeometry {
     public private(set) var vertices: [Float] = []
     /// Element IDs the GPU drew; the CG overlay pass skips these.
     public private(set) var handledIDs: Set<String> = []
+    /// Image elements to draw as textured quads (resolved to a texture by the
+    /// renderer). Referenced by `.image` draw commands.
+    public private(set) var imageDraws: [ImageDraw] = []
+    /// The GPU draw order, interleaving colored-triangle runs and images in
+    /// element (z) order so an image composites correctly between shapes. When
+    /// there are no images this is a single `.triangles` run (the fast path).
+    public private(set) var drawCommands: [DrawCommand] = []
+
+    /// A textured-quad draw: an image element's four corners in scene space
+    /// (already transformed) with matching texture coordinates and opacity.
+    public struct ImageDraw: Equatable, Sendable {
+        public var fileId: String
+        public var corners: [Point] // top-left, top-right, bottom-right, bottom-left
+        public var uvs: [Point] // matching texture coords (0…1), honoring any crop
+        public var opacity: Float
+    }
+
+    public enum DrawCommand: Equatable, Sendable {
+        /// A run of colored triangles: vertex index range into `vertices`.
+        case triangles(start: Int, count: Int)
+        /// An image: index into `imageDraws`.
+        case image(Int)
+    }
 
     /// Floats per vertex: x, y, packed color.
     static let floatsPerVertex = 3
+
+    /// True when the geometry is a single colored-triangle run with no images
+    /// (the renderer can draw the whole vertex buffer in one call).
+    public var hasOnlyTriangles: Bool {
+        imageDraws.isEmpty
+    }
 
     public var triangleCount: Int {
         vertices.count / (Self.floatsPerVertex * 3)
@@ -63,8 +91,28 @@ public struct SceneGeometry {
             Culling.visible(scene.visibleElements, in: $0, margin: Self.cullingMargin)
         } ?? scene.visibleElements
 
+        // Close the pending colored-triangle run as a draw command.
+        var runStart = 0
+        func flushTriangles() {
+            let end = vertices.count / Self.floatsPerVertex
+            if end > runStart {
+                drawCommands.append(.triangles(start: runStart, count: end - runStart))
+                runStart = end
+            }
+        }
+
         for element in candidates
             where !skipping.contains(element.id) && isTessellatable(element) {
+            if case let .image(props) = element.kind {
+                // Images break the triangle run so they composite in z-order.
+                flushTriangles()
+                if let draw = Self.imageDraw(props, base: element.base) {
+                    drawCommands.append(.image(imageDraws.count))
+                    imageDraws.append(draw)
+                }
+                handledIDs.insert(element.id)
+                continue
+            }
             // Rough shapes need a drawable; freedraw is tessellated from its
             // perfect-freehand outline and has none.
             let drawable = Self.isFreedraw(element) ? nil : shapeCache.drawable(for: element)
@@ -75,15 +123,42 @@ public struct SceneGeometry {
             vertices.append(contentsOf: verts)
             handledIDs.insert(element.id)
         }
+        flushTriangles()
     }
 
-    /// GPU-eligible elements: rough shapes and freedraw with a solid stroke and
-    /// no frame clipping. Everything else (text/image/frame/embeddable, dashed
-    /// or dotted strokes, framed children) falls through to Core Graphics.
+    /// Build the textured-quad corners for an image element. Corners are the
+    /// element rect mapped through its transform (translate + rotation).
+    private static func imageDraw(_ props: ImageProperties, base: BaseProperties) -> ImageDraw? {
+        guard let fileId = props.fileId else { return nil }
+        let transform = elementTransform(base)
+        let corners = [
+            transform(Point(0, 0)), transform(Point(base.width, 0)),
+            transform(Point(base.width, base.height)), transform(Point(0, base.height))
+        ]
+        // UVs span the whole texture unless a crop selects a sub-rect (in natural
+        // pixels — normalize by the crop's natural size).
+        var uvs = [Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)]
+        if let crop = props.crop, crop.naturalWidth > 0, crop.naturalHeight > 0 {
+            let u0 = crop.x / crop.naturalWidth, v0 = crop.y / crop.naturalHeight
+            let u1 = (crop.x + crop.width) / crop.naturalWidth
+            let v1 = (crop.y + crop.height) / crop.naturalHeight
+            uvs = [Point(u0, v0), Point(u1, v0), Point(u1, v1), Point(u0, v1)]
+        }
+        return ImageDraw(fileId: fileId, corners: corners, uvs: uvs, opacity: Float(base.opacity / 100))
+    }
+
     private func isTessellatable(_ element: ExcalidrawElement) -> Bool {
-        guard element.base.frameId == nil, element.base.strokeStyle == .solid else { return false }
+        Self.isGPUHandled(element)
+    }
+
+    /// GPU-eligible elements: rough shapes, freedraw (solid, dashed or dotted)
+    /// and images, with no frame clipping. Everything else (text, frames,
+    /// embeddables, framed children) falls through to Core Graphics. Cheap (no
+    /// tessellation) so the editor's CG overlay can compute the skip set.
+    public static func isGPUHandled(_ element: ExcalidrawElement) -> Bool {
+        guard element.base.frameId == nil else { return false }
         switch element.kind {
-        case .rectangle, .diamond, .ellipse, .line, .arrow, .freedraw: return true
+        case .rectangle, .diamond, .ellipse, .line, .arrow, .freedraw, .image: return true
         default: return false
         }
     }
@@ -130,7 +205,11 @@ public struct SceneGeometry {
                 }
             case .path:
                 guard let strokeRGBA else { continue }
-                for sub in subpaths {
+                // Dashed / dotted: split the outline into the pattern's "on" runs
+                // and stroke each as a solid piece (matches CG `setLineDash`).
+                let dash = drawable.options.strokeLineDash
+                let runs = dash.map { d in subpaths.flatMap { Tessellator.dashSplit($0, pattern: d) } } ?? subpaths
+                for sub in runs {
                     emit(
                         Tessellator.strokeTriangles(sub, halfWidth: base.strokeWidth / 2),
                         color: strokeRGBA,

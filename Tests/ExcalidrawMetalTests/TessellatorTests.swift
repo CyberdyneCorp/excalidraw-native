@@ -65,6 +65,34 @@ final class TessellatorTests: XCTestCase {
         XCTAssertTrue(Tessellator.fillTriangles([Point(0, 0), Point(1, 1)]).isEmpty)
     }
 
+    func testDashSplitProducesOnRunsAlongALine() throws {
+        // 100-long horizontal line, dash [10 on, 10 off] → 5 "on" runs of 10.
+        let line = [Point(0, 0), Point(100, 0)]
+        let runs = Tessellator.dashSplit(line, pattern: [10, 10])
+        XCTAssertEqual(runs.count, 5)
+        let totalOn = runs.reduce(0.0) { sum, run in
+            sum + zip(run, run.dropFirst()).reduce(0) { $0 + $1.0.distance(to: $1.1) }
+        }
+        XCTAssertEqual(totalOn, 50, accuracy: 1e-6)
+        // First run covers x in [0, 10].
+        XCTAssertEqual(runs[0].first, Point(0, 0))
+        XCTAssertEqual(try XCTUnwrap(runs[0].last?.x), 10, accuracy: 1e-6)
+    }
+
+    func testDashSplitWithEmptyOrSolidPatternReturnsWhole() {
+        let line = [Point(0, 0), Point(50, 0)]
+        XCTAssertEqual(Tessellator.dashSplit(line, pattern: []).count, 1)
+        XCTAssertEqual(Tessellator.dashSplit(line, pattern: [0, 0]).count, 1)
+    }
+
+    func testDashSplitCutsAcrossSegmentBoundaries() throws {
+        // Dash longer than the first segment must continue into the next.
+        let poly = [Point(0, 0), Point(5, 0), Point(10, 0)]
+        let runs = Tessellator.dashSplit(poly, pattern: [8, 4])
+        XCTAssertFalse(runs.isEmpty)
+        XCTAssertEqual(try XCTUnwrap(runs[0].last?.x), 8, accuracy: 1e-6)
+    }
+
     private func triangleArea(_ tris: [Point]) -> Double {
         var area = 0.0
         for i in stride(from: 0, to: tris.count, by: 3) {
