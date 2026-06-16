@@ -40,7 +40,7 @@ final class MetalSceneRendererTests: XCTestCase {
         XCTAssertTrue(geometry.handledIDs.contains("e"))
         XCTAssertFalse(geometry.handledIDs.contains("t"), "text must fall through to the CG overlay")
         XCTAssertFalse(geometry.isEmpty)
-        XCTAssertEqual(geometry.vertices.count % 18, 0)
+        XCTAssertEqual(geometry.vertices.count % 9, 0) // 3 floats/vertex × 3 vertices
     }
 
     func testGeometrySkipsFramedAndDashedElements() {

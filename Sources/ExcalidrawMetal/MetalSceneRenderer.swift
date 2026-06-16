@@ -1,5 +1,6 @@
 import CoreGraphics
 import ExcalidrawGeometry
+import ExcalidrawMath
 import ExcalidrawModel
 import ExcalidrawRender
 import Foundation
@@ -44,6 +45,7 @@ public final class MetalSceneRenderer: SceneRendering {
     ) {
         let geometry = SceneGeometry(
             scene: scene, theme: theme, skipping: skipping,
+            visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
             shapeCache: shapeCache, geometryCache: geometryCache
         )
 
@@ -93,7 +95,9 @@ public final class MetalSceneRenderer: SceneRendering {
         var geometry: SceneGeometry?
         timings.geometryMs = ms {
             geometry = SceneGeometry(
-                scene: scene, theme: theme, shapeCache: shapeCache, geometryCache: geometryCache
+                scene: scene, theme: theme,
+                visibleRegion: Self.visibleRegion(viewport: viewport, size: size),
+                shapeCache: shapeCache, geometryCache: geometryCache
             )
         }
         guard let geometry else { return timings }
@@ -136,6 +140,16 @@ public final class MetalSceneRenderer: SceneRendering {
         return gpu.image(
             vertices: geometry.vertices, transform: transform,
             pixelWidth: pixelWidth, pixelHeight: pixelHeight
+        )
+    }
+
+    /// The visible scene rectangle for the current viewport, used to cull the
+    /// GPU geometry to what's on screen.
+    static func visibleRegion(viewport: Viewport, size: CGSize) -> BoundingBox {
+        let topLeft = viewport.viewToScene(Point(0, 0))
+        let bottomRight = viewport.viewToScene(Point(size.width, size.height))
+        return BoundingBox(
+            minX: topLeft.x, minY: topLeft.y, maxX: bottomRight.x, maxY: bottomRight.y
         )
     }
 

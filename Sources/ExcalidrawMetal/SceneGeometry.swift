@@ -15,14 +15,19 @@ import RoughKit
 /// typography, decoding and clipping correctly. `handledIDs` is exactly the set
 /// the overlay must skip so nothing is drawn twice.
 public struct SceneGeometry {
-    /// Interleaved vertex data: `[x, y, r, g, b, a]` per vertex, three vertices
-    /// per triangle, in scene coordinates. The shader projects to clip space.
+    /// Interleaved vertex data: `[x, y, packedRGBA]` per vertex (3 floats),
+    /// three vertices per triangle, in scene coordinates. The color is an RGBA8
+    /// value bit-cast into a float; the shader unpacks it. The shader projects
+    /// position to clip space.
     public private(set) var vertices: [Float] = []
     /// Element IDs the GPU drew; the CG overlay pass skips these.
     public private(set) var handledIDs: Set<String> = []
 
+    /// Floats per vertex: x, y, packed color.
+    static let floatsPerVertex = 3
+
     public var triangleCount: Int {
-        vertices.count / 18
+        vertices.count / (Self.floatsPerVertex * 3)
     }
 
     public var isEmpty: Bool {
@@ -30,19 +35,33 @@ public struct SceneGeometry {
     }
 
     private let theme: Theme
+    /// Extra scene-unit margin so wide strokes near the viewport edge aren't
+    /// culled (matches `SceneRenderer.cullingMargin`).
+    private static let cullingMargin = 100.0
 
     public init(
-        scene: Scene, theme: Theme, skipping: Set<String> = [],
+        scene: Scene, theme: Theme, skipping: Set<String> = [], visibleRegion: BoundingBox? = nil,
         shapeCache: ShapeCache = ShapeCache(), geometryCache: GeometryCache? = nil
     ) {
         self.theme = theme
-        build(scene: scene, skipping: skipping, shapeCache: shapeCache, geometryCache: geometryCache)
+        build(
+            scene: scene, skipping: skipping, visibleRegion: visibleRegion,
+            shapeCache: shapeCache, geometryCache: geometryCache
+        )
     }
 
     private mutating func build(
-        scene: Scene, skipping: Set<String>, shapeCache: ShapeCache, geometryCache: GeometryCache?
+        scene: Scene, skipping: Set<String>, visibleRegion: BoundingBox?,
+        shapeCache: ShapeCache, geometryCache: GeometryCache?
     ) {
-        for element in scene.visibleElements
+        // Cull off-screen elements (parity with SceneRenderer) so a big scene
+        // only tessellates/draws what's visible. Culling selects elements; each
+        // element's cached vertices stay valid, so it composes with the cache.
+        let candidates = visibleRegion.map {
+            Culling.visible(scene.visibleElements, in: $0, margin: Self.cullingMargin)
+        } ?? scene.visibleElements
+
+        for element in candidates
             where !skipping.contains(element.id) && isTessellatable(element) {
             guard let drawable = shapeCache.drawable(for: element) else { continue }
             let verts = geometryCache?.vertices(for: element, theme: theme) {
@@ -183,14 +202,13 @@ public struct SceneGeometry {
         // Do NOT call reserveCapacity per emit: a tight per-call reservation
         // defeats Array's geometric growth and turns the many appends across a
         // scene into O(n²) reallocation. Plain append keeps amortized O(1).
+        // Color is packed RGBA8 bit-cast into one float (the shader unpacks it).
+        let packed = Float(bitPattern: color.packed)
         for p in triangles {
             let t = transform(p)
             out.append(Float(t.x))
             out.append(Float(t.y))
-            out.append(color.r)
-            out.append(color.g)
-            out.append(color.b)
-            out.append(color.a)
+            out.append(packed)
         }
     }
 
@@ -211,7 +229,18 @@ public struct SceneGeometry {
         }
     }
 
-    struct SIMDColor { var r, g, b, a: Float }
+    struct SIMDColor {
+        var r, g, b, a: Float
+
+        /// RGBA8 in byte order r,g,b,a — matches Metal's
+        /// `unpack_unorm4x8_to_float` (x=byte0 … w=byte3).
+        var packed: UInt32 {
+            func byte(_ v: Float) -> UInt32 {
+                UInt32((max(0, min(1, v)) * 255).rounded())
+            }
+            return byte(r) | (byte(g) << 8) | (byte(b) << 16) | (byte(a) << 24)
+        }
+    }
 
     private static func rgba(_ string: String, opacity: Float, theme: Theme) -> SIMDColor? {
         guard !ColorParser.isTransparent(string), let base = ColorParser.cgColor(string) else { return nil }
