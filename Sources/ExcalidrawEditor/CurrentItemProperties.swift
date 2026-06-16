@@ -13,6 +13,8 @@ public struct CurrentItemProperties: Sendable {
     public var opacity: Double = 100
     public var fontFamily: Int = FontFamily.default
     public var fontSize: Double = 20
+    /// Create arrows as orthogonal "elbow" arrows.
+    public var elbowed: Bool = false
 
     public init() {}
 

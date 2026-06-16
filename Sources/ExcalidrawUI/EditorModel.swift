@@ -22,6 +22,7 @@ public final class EditorModel: ObservableObject {
     @Published public var fillStyle: ExcalidrawModel.FillStyle = .hachure
     @Published public var strokeStyle: ExcalidrawModel.StrokeStyle = .solid
     @Published public var opacity: Double = 100
+    @Published public var elbowed: Bool = false
     @Published public var fontFamily: Int = FontFamily.default
     @Published public var fontSize: Double = 20
 
@@ -173,6 +174,12 @@ public final class EditorModel: ObservableObject {
         fontSize = size
         controller.currentItem.fontSize = size
         controller.updateSelectedText { $0.fontSize = size }
+        revision += 1
+    }
+
+    public func setElbowed(_ elbowed: Bool) {
+        self.elbowed = elbowed
+        controller.setElbowed(elbowed)
         revision += 1
     }
 

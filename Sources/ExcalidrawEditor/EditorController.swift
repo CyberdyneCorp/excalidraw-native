@@ -382,7 +382,11 @@ public final class EditorController {
             element = ExcalidrawElement(base: base, kind: .line(LinearProperties(points: [Point(0, 0), Point(0, 0)])))
         case .arrow:
             // Arrows default to an arrowhead on the end.
-            let props = ArrowProperties(points: [Point(0, 0), Point(0, 0)], endArrowhead: .arrow)
+            let props = ArrowProperties(
+                points: [Point(0, 0), Point(0, 0)],
+                endArrowhead: .arrow,
+                elbowed: currentItem.elbowed
+            )
             element = ExcalidrawElement(base: base, kind: .arrow(props))
         case .freedraw:
             let props = FreedrawProperties(points: [Point(0, 0)], pressures: [pressure], simulatePressure: false)
@@ -504,6 +508,7 @@ public final class EditorController {
             selectedIDs = []
         } else {
             if bindingEnabled { bindArrowEndpoints(id) }
+            routeElbowArrow(id)
             reassignFrameMembership([id])
             store.commit()
             if !toolLocked { activeTool = .selection }
@@ -564,12 +569,16 @@ public final class EditorController {
                 endGlobal = Binding.point(forFixedPoint: binding.fixedPoint, in: ElementGeometry.bounds(target))
             }
             var arrow = element
-            arrow.base.x = startGlobal.x
-            arrow.base.y = startGlobal.y
-            props.points = [Point(0, 0), Point(endGlobal.x - startGlobal.x, endGlobal.y - startGlobal.y)]
-            arrow.base.width = abs(endGlobal.x - startGlobal.x)
-            arrow.base.height = abs(endGlobal.y - startGlobal.y)
-            arrow.kind = .arrow(props)
+            if props.elbowed {
+                applyElbowRoute(to: &arrow, startGlobal: startGlobal, endGlobal: endGlobal, in: scene)
+            } else {
+                arrow.base.x = startGlobal.x
+                arrow.base.y = startGlobal.y
+                props.points = [Point(0, 0), Point(endGlobal.x - startGlobal.x, endGlobal.y - startGlobal.y)]
+                arrow.base.width = abs(endGlobal.x - startGlobal.x)
+                arrow.base.height = abs(endGlobal.y - startGlobal.y)
+                arrow.kind = .arrow(props)
+            }
             scene.replace(arrow)
         }
     }

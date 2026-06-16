@@ -287,6 +287,21 @@ final class EditorModelTests: XCTestCase {
         XCTAssertNil(m.controller.selectedElements.first?.base.link)
     }
 
+    func testElbowToggleCreatesOrthogonalArrow() {
+        let m = EditorModel()
+        m.setElbowed(true)
+        XCTAssertTrue(m.elbowed)
+        m.select(tool: .arrow)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 120, y: 80))
+        guard case let .arrow(props) = m.controller.scene.visibleElements.first?.kind else { return XCTFail("arrow") }
+        XCTAssertTrue(props.elbowed)
+        // Routed orthogonal: every segment is axis-aligned.
+        for i in 0 ..< (props.points.count - 1) {
+            let a = props.points[i], b = props.points[i + 1]
+            XCTAssertTrue(abs(a.x - b.x) < 1e-6 || abs(a.y - b.y) < 1e-6)
+        }
+    }
+
     func testThemeAndZenToggles() {
         let m = EditorModel()
         XCTAssertEqual(m.theme, .light)

@@ -254,6 +254,14 @@ public struct EditorView: View {
                     Divider().frame(height: 24)
                     fontControls
                 }
+                if showArrowControls {
+                    Divider().frame(height: 24)
+                    Toggle(isOn: Binding(get: { model.elbowed }, set: { model.setElbowed($0) })) {
+                        Image(systemName: "arrow.turn.right.up")
+                    }
+                    .toggleStyle(.button)
+                    .accessibilityIdentifier("elbow-toggle")
+                }
                 if exported {
                     Text("Exported").foregroundStyle(.secondary).accessibilityIdentifier("exported-confirmation")
                 }
@@ -273,6 +281,12 @@ public struct EditorView: View {
     private var showFontControls: Bool {
         model.activeTool == .text || model.editingTextID != nil
             || model.controller.selectedElements.contains { if case .text = $0.kind { return true }; return false }
+    }
+
+    /// Show the elbow toggle when the arrow tool is active or an arrow is selected.
+    private var showArrowControls: Bool {
+        model.activeTool == .arrow
+            || model.controller.selectedElements.contains { if case .arrow = $0.kind { return true }; return false }
     }
 
     @ViewBuilder
