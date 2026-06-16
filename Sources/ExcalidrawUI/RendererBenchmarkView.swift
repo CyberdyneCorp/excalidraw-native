@@ -4,7 +4,16 @@ import SwiftUI
 /// main thread and shows the per-scene frame times + Metal phase breakdown in a
 /// table, so the numbers are readable on the device without the Xcode console.
 public struct RendererBenchmarkView: View {
+    enum Mode: String, CaseIterable, Identifiable {
+        case live = "Live"
+        case table = "Table"
+        var id: String {
+            rawValue
+        }
+    }
+
     @Environment(\.dismiss) private var dismiss
+    @State private var mode: Mode = .live
     @State private var rows: [RendererBenchmark.Row] = []
     @State private var running = false
 
@@ -13,12 +22,18 @@ public struct RendererBenchmarkView: View {
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                header
-                Divider()
-                if rows.isEmpty, !running {
-                    placeholder
-                } else {
-                    resultsTable
+                Picker("Mode", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 12).padding(.top, 8)
+                .accessibilityIdentifier("benchmark-mode")
+                Divider().padding(.top, 8)
+                switch mode {
+                case .live:
+                    LiveBenchmarkView()
+                case .table:
+                    tableContent
                 }
             }
             .navigationTitle("Renderer Benchmark")
@@ -29,12 +44,26 @@ public struct RendererBenchmarkView: View {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Done") { dismiss() }.accessibilityIdentifier("benchmark-done")
                     }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button(running ? "Running…" : "Run") { run() }
-                            .disabled(running)
-                            .accessibilityIdentifier("benchmark-run")
+                    if mode == .table {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button(running ? "Running…" : "Run") { run() }
+                                .disabled(running)
+                                .accessibilityIdentifier("benchmark-run")
+                        }
                     }
                 }
+        }
+    }
+
+    private var tableContent: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+            if rows.isEmpty, !running {
+                placeholder
+            } else {
+                resultsTable
+            }
         }
     }
 

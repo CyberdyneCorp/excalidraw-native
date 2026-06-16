@@ -160,23 +160,31 @@ final class SmokeUITests: XCTestCase {
     }
 
     func testRendererBenchmarkScreenShowsResults() {
-        // Open the on-screen renderer benchmark, run it, and confirm a results
-        // row appears (so the numbers are visible on the device, not just the
-        // Xcode console).
+        // Open the on-screen renderer benchmark. It defaults to Live mode, which
+        // renders the moving stress scene on screen with a live FPS readout.
         app.buttons["benchmark"].tap()
+        XCTAssertTrue(app.staticTexts["FPS"].waitForExistence(timeout: 5), "live readout missing")
+        // Let a few animated frames render, then capture what's on screen.
+        sleep(2)
+        let live = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        live.name = "renderer-benchmark-live"
+        live.lifetime = .keepAlways
+        add(live)
+
+        // Switch to the Table mode and run the headless comparison.
+        app.segmentedControls["benchmark-mode"].buttons["Table"].tap()
         let run = app.buttons["benchmark-run"]
         XCTAssertTrue(run.waitForExistence(timeout: 5))
         run.tap()
-        // The run renders several synthetic scenes with both backends; give it
-        // time to populate the first row.
         let firstRow = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH 'benchmark-row-'")
         ).firstMatch
         XCTAssertTrue(firstRow.waitForExistence(timeout: 30), "benchmark produced no result rows")
-        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        shot.name = "renderer-benchmark"
-        shot.lifetime = .keepAlways
-        add(shot)
+        let table = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        table.name = "renderer-benchmark-table"
+        table.lifetime = .keepAlways
+        add(table)
+
         app.buttons["benchmark-done"].tap()
         XCTAssertTrue(canvas.waitForExistence(timeout: 5))
     }
