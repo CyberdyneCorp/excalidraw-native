@@ -72,6 +72,9 @@ public final class SceneRenderer {
         theme: Theme = .light, clip: BoundingBox? = nil
     ) {
         self.theme = theme
+        ctx.setShouldAntialias(true)
+        ctx.setAllowsAntialiasing(true)
+        ctx.interpolationQuality = .high
         // Background: a user-set colour is theme-filtered (white→dark); the
         // default canvas colour is used directly so it isn't double-inverted.
         let background: CGColor = if let userBackground = scene.appState.viewBackgroundColor {

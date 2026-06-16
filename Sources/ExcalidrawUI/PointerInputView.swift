@@ -31,6 +31,9 @@
         /// "Hold to snap": while drawing a freehand stroke, holding the pen still
         /// for this long finalizes the stroke and snaps it to a recognized shape.
         private let dwellInterval: TimeInterval = 0.6
+        /// Movement under this (points) counts as "holding still", so the dwell
+        /// timer isn't reset by Pencil jitter.
+        private let dwellMoveThreshold: CGFloat = 6
         private var dwellTimer: Timer?
         private var lastDrawPoint: CGPoint = .zero
         private var recognizedViaDwell = false
@@ -67,7 +70,7 @@
             if gesturing || all.count >= 2 { cancelDwell(); updateGesture(all); return }
             guard let touch = touches.first, accept(touch) else { return }
             forward(.move, touch)
-            scheduleDwell(at: touch.location(in: self))
+            dwellMoved(to: touch.location(in: self))
         }
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -100,13 +103,33 @@
 
         // MARK: Hold-to-snap dwell
 
+        /// (Re)arm the dwell timer for the freehand stroke at `point`.
         private func scheduleDwell(at point: CGPoint) {
             guard let model, model.shapeRecognitionEnabled, model.isDrawingFreehand else { return }
             lastDrawPoint = point
+            armDwellTimer()
+        }
+
+        /// On movement, only re-arm when the pen actually moved a meaningful
+        /// distance. Apple Pencil streams events continuously (pressure/azimuth)
+        /// even while held still, which would otherwise reset the timer forever.
+        private func dwellMoved(to point: CGPoint) {
+            guard dwellTimer != nil else { return }
+            if hypot(point.x - lastDrawPoint.x, point.y - lastDrawPoint.y) > dwellMoveThreshold {
+                lastDrawPoint = point
+                armDwellTimer()
+            }
+        }
+
+        private func armDwellTimer() {
             dwellTimer?.invalidate()
-            dwellTimer = Timer.scheduledTimer(withTimeInterval: dwellInterval, repeats: false) { [weak self] _ in
+            let timer = Timer(timeInterval: dwellInterval, repeats: false) { [weak self] _ in
                 self?.fireDwell()
             }
+            // `.common` so it still fires while a touch is actively tracking the
+            // run loop (the default mode is suspended during touch tracking).
+            RunLoop.main.add(timer, forMode: .common)
+            dwellTimer = timer
         }
 
         private func cancelDwell() {
