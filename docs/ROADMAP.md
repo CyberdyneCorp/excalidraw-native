@@ -65,8 +65,10 @@ Legend: 🎯 milestone deliverable · 🧪 test focus · ⚠️ risk/hard part.
 - ⚠️ Core Text metric parity — validate early in this phase.
 - 🎯 Feature-complete single-user editor for all core element types.
 
-## Phase 5 — Adaptive UI for iPhone & iPad
+## Phase 5 — Adaptive UI for iPhone & iPad ✅
 **Goal:** great UX on both form factors, Pencil-first.
+
+> **Status: complete.** Testable cores: `DeviceClass`/`FormFactor` breakpoints, `Shortcuts` (key chords → commands), `CommandRegistry` (palette + fuzzy search), `Theme`/`ThemeFilter` (dark mode via invert + 180° hue-rotate), `SceneDocument` (encode/decode through restore). `EditorModel` adds zoom (in/out/reset/fit), command dispatch, clipboard (`Pasteboard`), theme/zen toggles, and document save/load. `EditorView` is size-class adaptive (toolbar top on iPad / bottom on iPhone), with a zoom/theme/zen/palette footer, on-canvas context menu, hardware-keyboard shortcuts, and a searchable command palette. The XCUITest passes on both iPhone (compact) and iPad (regular) simulators. **Deferred:** Files-app `DocumentGroup` browser + autosave wiring (persistence core is done and tested), Apple Pencil hover (17.5+) and Pencil Pro, full font/arrowhead pickers.
 - Size-class-adaptive layout: iPhone bottom toolbar + bottom-sheet properties, fullscreen dialogs; iPad side panels, floating/docked, hover affordances.
 - Apple Pencil: hover preview (17.5+), palm rejection, pen-mode toggle; (Pencil Pro squeeze/roll behind availability checks).
 - Context menu (long-press / right-click), command palette, keyboard shortcuts (iPad hardware keyboard), zoom controls, dark mode, zen/view modes.

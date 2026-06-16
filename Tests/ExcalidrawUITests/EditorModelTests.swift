@@ -174,6 +174,18 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
     }
 
+    func testDocumentSaveLoadRoundTrip() {
+        let m = EditorModel()
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 60, y: 40))
+        let data = m.documentData()
+        XCTAssertNotNil(data)
+
+        let m2 = EditorModel()
+        m2.loadDocument(data!)
+        XCTAssertEqual(m2.controller.scene.visibleElements.count, 1)
+    }
+
     func testThemeAndZenToggles() {
         let m = EditorModel()
         XCTAssertEqual(m.theme, .light)

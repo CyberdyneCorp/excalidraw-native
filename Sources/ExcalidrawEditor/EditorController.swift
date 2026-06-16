@@ -156,6 +156,13 @@ public final class EditorController {
 
     // MARK: Commands
 
+    /// Replace the document with a freshly loaded scene (resets history/selection).
+    public func load(scene: Scene) {
+        store = Store(scene: scene)
+        selectedIDs = []
+        interaction = .idle
+    }
+
     public func setTool(_ tool: Tool) { activeTool = tool }
     public func selectAll() { selectedIDs = Set(scene.visibleElements.map(\.id)) }
     public func clearSelection() { selectedIDs = [] }

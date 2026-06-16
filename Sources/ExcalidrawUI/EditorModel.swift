@@ -235,6 +235,20 @@ public final class EditorModel: ObservableObject {
         SVGExporter.svg(controller.scene)
     }
 
+    // MARK: Document persistence
+
+    /// Serialize the current scene as a `.excalidraw` document.
+    public func documentData() -> Data? {
+        try? SceneDocument.encode(controller.scene)
+    }
+
+    /// Load a `.excalidraw` document, replacing the current scene.
+    public func loadDocument(_ data: Data) {
+        guard let scene = try? SceneDocument.decode(data) else { return }
+        controller.load(scene: scene)
+        revision += 1
+    }
+
     // MARK: Text editing
 
     func beginTextEditing(at viewPoint: CGPoint, scenePoint: Point) {
