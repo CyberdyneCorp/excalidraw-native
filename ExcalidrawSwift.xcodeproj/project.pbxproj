@@ -30,7 +30,7 @@
 		253BD78B90B09B251AE6DDA8 /* excalidraw-swift */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "excalidraw-swift"; path = .; sourceTree = SOURCE_ROOT; };
 		3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExcalidrawApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
-		B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ExcalidrawAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExcalidrawAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F04B3645468416DBC8FE24BA /* sample.excalidraw */ = {isa = PBXFileReference; lastKnownFileType = text; path = sample.excalidraw; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -223,6 +223,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 2C69VJZSNR;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -386,6 +387,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 2C69VJZSNR;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

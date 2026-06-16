@@ -76,8 +76,10 @@ Legend: 🎯 milestone deliverable · 🧪 test focus · ⚠️ risk/hard part.
 - 🧪 Snapshot tests across size classes/orientations; XCUITest on iPhone + iPad; Pencil/pressure paths via injectable input.
 - 🎯 Ships as a usable iPhone + iPad app.
 
-## Phase 6 — Library, persistence polish, snapping & binding
+## Phase 6 — Library, persistence polish, snapping & binding ✅
 **Goal:** the "important" tier from the investigation.
+
+> **Status: complete.** `ExcalidrawLibrary` (read v1/v2, write v2) + a library panel (add selection, thumbnail grid, stamp). Object + grid `Snapping` with live guide lines and a toggle. Arrow↔shape `Binding` (bind on draw, follow on move/resize). `Frames` (frame tool, centre-containment membership, move-with-children, border/name render + child clipping). Linear element point editing (double-tap → drag/insert vertices). Image crop (crop-aware rendering + `setCrop`). Stats readout in the footer. **Deferred:** interactive image-crop handles, library disk persistence wiring, gap-snaps, element linking, PNG scene-embed (the crop/library/binding cores are done and tested).
 - Library (`.excalidrawlib`): save/browse/search/drag-to-canvas; local persistence.
 - Object snapping (point + gap snaps) and snap-line rendering; midpoint snapping.
 - Arrow↔shape binding (suggested binding, focus point, fixed-point modes); linear element midpoint editing.
