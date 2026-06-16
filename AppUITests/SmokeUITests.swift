@@ -171,6 +171,19 @@ final class SmokeUITests: XCTestCase {
         live.lifetime = .keepAlways
         add(live)
 
+        // Switch to the direct-to-drawable backend (when Metal is available) and
+        // confirm it keeps rendering on screen.
+        let direct = app.buttons["live-backend-Direct"]
+        if direct.waitForExistence(timeout: 3) {
+            direct.tap()
+            sleep(2)
+            XCTAssertTrue(app.staticTexts["FPS"].exists)
+            let directShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            directShot.name = "renderer-benchmark-direct"
+            directShot.lifetime = .keepAlways
+            add(directShot)
+        }
+
         // Switch to the Table mode and run the headless comparison.
         app.segmentedControls["benchmark-mode"].buttons["Table"].tap()
         let run = app.buttons["benchmark-run"]
