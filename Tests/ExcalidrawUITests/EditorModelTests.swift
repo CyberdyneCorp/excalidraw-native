@@ -479,6 +479,51 @@ final class EditorModelTests: XCTestCase {
         XCTAssertNil(m.staticLayerImage(size: CGSize(width: 400, height: 300)))
     }
 
+    private func pixels(_ image: CGImage, _ w: Int, _ h: Int) -> [UInt8] {
+        var buffer = [UInt8](repeating: 0, count: w * h * 4)
+        buffer.withUnsafeMutableBytes { raw in
+            let ctx = CGContext(
+                data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+            ctx?.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        }
+        return buffer
+    }
+
+    func testOffscreenLayerOrientationMatchesTopLeftRender() throws {
+        // Regression: the offscreen static/gesture image must have the same
+        // orientation as the live `withCGContext` (top-left) render, else the
+        // cached layer composites upside-down during move/pan/zoom.
+        var rect = BaseProperties(id: "r"); rect.x = 40; rect.y = 20; rect.width = 200; rect.height = 40
+        rect.backgroundColor = "#ff0000"; rect.fillStyle = .solid; rect.seed = 3
+        let scene = ExcalidrawModel.Scene(elements: [ExcalidrawElement(base: rect, kind: .rectangle)])
+        let (w, h) = (400, 300)
+        let m = EditorModel(scene: scene)
+        m.canvasSize = CGSize(width: w, height: h)
+        m.displayScale = 1
+
+        m.beginViewportGesture()
+        let snapshot = try XCTUnwrap(m.gestureSnapshot(size: CGSize(width: w, height: h)))
+
+        // Reference: render the same scene into a top-left-oriented context.
+        let ref = CGContext(
+            data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        ref.translateBy(x: 0, y: CGFloat(h)); ref.scaleBy(x: 1, y: -1)
+        SceneRenderer().render(scene, in: ref, viewport: Viewport(), size: CGSize(width: w, height: h))
+        let reference = try XCTUnwrap(ref.makeImage())
+
+        let snap = pixels(snapshot.image, w, h)
+        let expected = pixels(reference, w, h)
+        var differing = 0
+        for i in stride(from: 0, to: snap.count, by: 4) where abs(Int(snap[i]) - Int(expected[i])) > 24 {
+            differing += 1
+        }
+        XCTAssertLessThan(Double(differing) / Double(w * h), 0.02, "offscreen layer is mis-oriented vs top-left render")
+    }
+
     func testViewportGestureSnapshotTracksPanAndZoom() {
         let m = EditorModel(viewport: Viewport(scrollX: 0, scrollY: 0, zoom: 1))
         m.canvasSize = CGSize(width: 400, height: 300)

@@ -113,6 +113,11 @@ public extension EditorModel {
             data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
+        // A bitmap context is bottom-up; flip to top-left so the produced
+        // CGImage matches SwiftUI `Image`/`withCGContext` orientation (the live
+        // canvas composites this image over a top-left dynamic pass).
+        ctx.translateBy(x: 0, y: CGFloat(h))
+        ctx.scaleBy(x: 1, y: -1)
         ctx.scaleBy(x: displayScale, y: displayScale)
         renderer.render(
             controller.scene, in: ctx, viewport: viewport ?? self.viewport,
