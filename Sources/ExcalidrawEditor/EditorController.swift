@@ -430,11 +430,25 @@ public final class EditorController {
         let statics = scene.visibleElements
             .filter { !movingIDs.contains($0.id) }
             .map { ElementGeometry.bounds($0) }
-        let result = Snapping.snap(moving: movingBounds, statics: statics, threshold: Snapping.defaultDistance / zoom)
-        dx += result.offsetX
-        dy += result.offsetY
-        snapLinesX = result.verticalLines
-        snapLinesY = result.horizontalLines
+        let threshold = Snapping.defaultDistance / zoom
+        let result = Snapping.snap(moving: movingBounds, statics: statics, threshold: threshold)
+        var offsetX = result.offsetX, offsetY = result.offsetY
+        var linesX = result.verticalLines, linesY = result.horizontalLines
+
+        // Gap (distribution) snapping fills in an axis that edge/centre snapping
+        // left unmatched, so equal spacing wins only when nothing else aligns.
+        let gap = Snapping.gapSnap(moving: movingBounds, statics: statics, threshold: threshold)
+        if linesX.isEmpty, !gap.verticalLines.isEmpty {
+            offsetX = gap.offsetX; linesX = gap.verticalLines
+        }
+        if linesY.isEmpty, !gap.horizontalLines.isEmpty {
+            offsetY = gap.offsetY; linesY = gap.horizontalLines
+        }
+
+        dx += offsetX
+        dy += offsetY
+        snapLinesX = linesX
+        snapLinesY = linesY
     }
 
     private func eraseAt(_ point: Point) {

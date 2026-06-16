@@ -37,6 +37,23 @@ final class SnapIntegrationTests: XCTestCase {
         XCTAssertEqual(ec.scene.element(id: "mover")?.base.x ?? .nan, 3, accuracy: 1e-6)
     }
 
+    func testMoveGapSnapsToEqualSpacing() {
+        // a at x 0..40, b at x 120..160 (gap 80, both on row y 0..40). Drag a
+        // third box so it centres in the gap (target left edge x=60).
+        let ec = EditorController(scene: Scene(elements: [
+            rect("a", x: 0, y: 0),
+            rect("b", x: 120, y: 0),
+            rect("mover", x: 300, y: 0)
+        ]))
+        ec.snapEnabled = true
+        // Move "mover" so its left edge reaches ≈63 (within 8 of the centred 60).
+        ec.pointerDown(PointerEvent(scenePoint: Point(320, 20), phase: .down))
+        ec.pointerMove(PointerEvent(scenePoint: Point(83, 20), phase: .move)) // dx = -237 → left ≈ 63
+        ec.pointerUp(PointerEvent(scenePoint: Point(83, 20), phase: .up))
+        // Centred in the gap: left edge 60, so both gaps are 20.
+        XCTAssertEqual(ec.scene.element(id: "mover")?.base.x ?? .nan, 60, accuracy: 1e-6)
+    }
+
     func testSnapLinesClearedOnPointerUp() {
         let ec = EditorController(scene: Scene(elements: [rect("a", x: 0, y: 0), rect("b", x: 300, y: 0)]))
         ec.snapEnabled = true
