@@ -29,6 +29,20 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F6AE3AF36CA6C98ADBEDF399"
+               BuildableName = "ExcalidrawAppBenchmarks.xctest"
+               BlueprintName = "ExcalidrawAppBenchmarks"
+               ReferencedContainer = "container:ExcalidrawSwift.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "32FBD13A623FD01C4BBDA7FE"
                BuildableName = "ExcalidrawAppUITests.xctest"
                BlueprintName = "ExcalidrawAppUITests"
@@ -62,6 +76,17 @@
                BlueprintIdentifier = "32FBD13A623FD01C4BBDA7FE"
                BuildableName = "ExcalidrawAppUITests.xctest"
                BlueprintName = "ExcalidrawAppUITests"
+               ReferencedContainer = "container:ExcalidrawSwift.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F6AE3AF36CA6C98ADBEDF399"
+               BuildableName = "ExcalidrawAppBenchmarks.xctest"
+               BlueprintName = "ExcalidrawAppBenchmarks"
                ReferencedContainer = "container:ExcalidrawSwift.xcodeproj">
             </BuildableReference>
          </TestableReference>

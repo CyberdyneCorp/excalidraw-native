@@ -8,6 +8,13 @@ options:
     iOS: "17.0"
   createIntermediateGroups: true
 
+# Automatic signing for device builds (the team is encoded here so `xcodegen`
+# regeneration preserves it). Change `DEVELOPMENT_TEAM` for your own account.
+settings:
+  base:
+    DEVELOPMENT_TEAM: 2C69VJZSNR
+    CODE_SIGN_STYLE: Automatic
+
 packages:
   ExcalidrawSwift:
     path: .
@@ -51,6 +58,29 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ai.cyberdynecorp.excalidraw.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+
+  # App-hosted unit tests: import the render modules and run rendering
+  # benchmarks in-process so they can be measured on a real device.
+  ExcalidrawAppBenchmarks:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AppBenchmarks
+    dependencies:
+      - target: ExcalidrawApp
+      - package: ExcalidrawSwift
+        product: ExcalidrawRender
+      - package: ExcalidrawSwift
+        product: ExcalidrawModel
+      - package: ExcalidrawSwift
+        product: ExcalidrawMath
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.cyberdynecorp.excalidraw.app.benchmarks
+        GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.0"
 
 schemes:
@@ -59,7 +89,9 @@ schemes:
       targets:
         ExcalidrawApp: all
         ExcalidrawAppUITests: [test]
+        ExcalidrawAppBenchmarks: [test]
     test:
       targets:
         - ExcalidrawAppUITests
+        - ExcalidrawAppBenchmarks
       gatherCoverageData: true
