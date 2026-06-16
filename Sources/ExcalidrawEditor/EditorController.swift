@@ -570,10 +570,16 @@ public final class EditorController {
         }
 
         if let hit = topElement(at: point, type: event.type) {
+            // Hitting one element of a group selects the whole group.
+            let group = groupSiblings(of: hit)
             if event.toggleSelection {
-                if selectedIDs.contains(hit) { selectedIDs.remove(hit) } else { selectedIDs.insert(hit) }
+                if selectedIDs.isSuperset(of: group) {
+                    selectedIDs.subtract(group)
+                } else {
+                    selectedIDs.formUnion(group)
+                }
             } else if !selectedIDs.contains(hit) {
-                selectedIDs = [hit]
+                selectedIDs = group
             }
             interaction = .moving(origin: point, originals: snapshotForMove())
         } else {
@@ -628,8 +634,16 @@ public final class EditorController {
         let within = scene.visibleElements.filter { element in
             let b = ElementGeometry.bounds(element)
             return b.minX >= rect.minX && b.maxX <= rect.maxX && b.minY >= rect.minY && b.maxY <= rect.maxY
-        }.map(\.id)
+        }.flatMap { groupSiblings(of: $0.id) }
         if additive { selectedIDs.formUnion(within) } else { selectedIDs = Set(within) }
+    }
+
+    /// All visible elements sharing the (outermost) group of `id`, or just `id`
+    /// if it isn't grouped — so selecting one groups them all.
+    func groupSiblings(of id: String) -> Set<String> {
+        guard let element = scene.element(id: id), let group = element.base.groupIds.last else { return [id] }
+        let siblings = scene.visibleElements.filter { $0.base.groupIds.contains(group) }.map(\.id)
+        return Set(siblings).union([id])
     }
 
     private func pruneSelection() {

@@ -102,6 +102,16 @@ public final class EditorModel: ObservableObject {
             return
         }
 
+        // The table tool drops a 3×3 grid where tapped.
+        if activeTool == .table {
+            if phase == .down {
+                controller.createTable(at: scenePoint)
+                revertToSelection()
+                revision += 1
+            }
+            return
+        }
+
         let event = PointerEvent(
             scenePoint: scenePoint, phase: phase, type: type,
             pressure: pressure, shift: shift, alt: alt, toggleSelection: toggle
@@ -554,6 +564,34 @@ public final class EditorModel: ObservableObject {
         editingTextID = id
         editingText = ""
         editingTextOrigin = viewPoint
+        revision += 1
+    }
+
+    /// Revert to the selection tool after a one-shot placement (unless locked).
+    private func revertToSelection() {
+        if !controller.toolLocked {
+            controller.setTool(.selection)
+            activeTool = .selection
+        }
+    }
+
+    // MARK: Tables
+
+    /// The table group of the current single-group selection, if any.
+    public var selectedTableGroup: String? {
+        let groups = Set(controller.selectedElements.compactMap { controller.tableGroupID(of: $0.id) })
+        return groups.count == 1 ? groups.first : nil
+    }
+
+    public func addTableRow() {
+        guard let group = selectedTableGroup else { return }
+        controller.addTableRow(group)
+        revision += 1
+    }
+
+    public func addTableColumn() {
+        guard let group = selectedTableGroup else { return }
+        controller.addTableColumn(group)
         revision += 1
     }
 

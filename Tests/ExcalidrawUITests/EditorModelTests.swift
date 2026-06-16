@@ -418,6 +418,17 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.selectedElements.first?.base.roundness?.type, RoundnessType.adaptiveRadius)
     }
 
+    func testTableToolCreatesGridAndAddsRow() {
+        let m = EditorModel()
+        m.select(tool: .table)
+        m.pointer(.down, at: CGPoint(x: 40, y: 40))
+        XCTAssertEqual(m.activeTool, .selection) // one-shot tool reverts
+        XCTAssertEqual(m.controller.scene.visibleElements.count, 18) // 3×3 cells × (rect + text)
+        XCTAssertNotNil(m.selectedTableGroup)
+        m.addTableRow()
+        XCTAssertEqual(m.controller.scene.visibleElements.count, 18 + 6) // +3 cells × 2
+    }
+
     func testThemeAndZenToggles() {
         let m = EditorModel()
         XCTAssertEqual(m.theme, .light)
