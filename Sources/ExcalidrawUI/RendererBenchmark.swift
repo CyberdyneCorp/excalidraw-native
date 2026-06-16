@@ -19,14 +19,23 @@ public enum RendererBenchmark {
         public let cpuMs: Double
         /// `nil` when Metal is unavailable on this device.
         public let metalMs: Double?
+        /// Direct-to-drawable cost: the GPU frame with no read-back / CG
+        /// compositing (what an on-screen present pays, minus the async present).
+        public let metalDirectMs: Double?
         public let geometryMs: Double?
         public let gpuMs: Double?
         public let overlayMs: Double?
 
-        /// CPU ÷ Metal — above 1 means Metal is faster.
+        /// CPU ÷ Metal (read-back path) — above 1 means Metal is faster.
         public var ratio: Double? {
             guard let metalMs, metalMs > 0 else { return nil }
             return cpuMs / metalMs
+        }
+
+        /// CPU ÷ Metal-direct — above 1 means the direct GPU path is faster.
+        public var directRatio: Double? {
+            guard let metalDirectMs, metalDirectMs > 0 else { return nil }
+            return cpuMs / metalDirectMs
         }
     }
 
@@ -83,6 +92,7 @@ public enum RendererBenchmark {
             }
 
             var metalMs: Double?
+            var metalDirectMs: Double?
             var geometryMs: Double?
             var gpuMs: Double?
             var overlayMs: Double?
@@ -92,6 +102,17 @@ public enum RendererBenchmark {
                 metalMs = milliseconds(iterations) {
                     metal.render(scene, in: metalCtx, viewport: viewport, size: size)
                 }
+                // Direct-to-drawable cost: GPU frame with no read-back / CG passes.
+                metal.renderDirectFrame(
+                    scene: scene, viewport: viewport, size: size, theme: .light,
+                    pixelWidth: width, pixelHeight: height
+                )
+                metalDirectMs = milliseconds(iterations) {
+                    metal.renderDirectFrame(
+                        scene: scene, viewport: viewport, size: size, theme: .light,
+                        pixelWidth: width, pixelHeight: height
+                    )
+                }
                 let phases = metal.renderTimed(scene, in: context(), viewport: viewport, size: size)
                 geometryMs = phases.geometryMs
                 gpuMs = phases.gpuMs
@@ -100,7 +121,8 @@ public enum RendererBenchmark {
 
             return Row(
                 label: config.label, count: config.count, cpuMs: cpuMs,
-                metalMs: metalMs, geometryMs: geometryMs, gpuMs: gpuMs, overlayMs: overlayMs
+                metalMs: metalMs, metalDirectMs: metalDirectMs,
+                geometryMs: geometryMs, gpuMs: gpuMs, overlayMs: overlayMs
             )
         }
     }

@@ -91,24 +91,26 @@ public struct RendererBenchmarkView: View {
 
     private var resultsTable: some View {
         ScrollView {
-            Grid(alignment: .trailing, horizontalSpacing: 14, verticalSpacing: 8) {
+            Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 8) {
                 GridRow {
                     cell("Scene", bold: true, align: .leading)
                     cell("N", bold: true)
                     cell("CPU", bold: true)
                     cell("Metal", bold: true)
-                    cell("Ratio", bold: true)
-                    cell("geom/gpu/ovl", bold: true)
+                    cell("Direct", bold: true)
+                    cell("CPU/Metal", bold: true)
+                    cell("CPU/Direct", bold: true)
                 }
-                Divider().gridCellColumns(6)
+                Divider().gridCellColumns(7)
                 ForEach(rows) { row in
                     GridRow {
                         cell(row.label, align: .leading)
                         cell("\(row.count)")
                         cell(ms(row.cpuMs))
                         cell(row.metalMs.map(ms) ?? "—")
+                        cell(row.metalDirectMs.map(ms) ?? "—")
                         ratioCell(row.ratio)
-                        cell(phaseText(row), mono: true)
+                        ratioCell(row.directRatio)
                     }
                     .accessibilityIdentifier("benchmark-row-\(row.label)-\(row.count)")
                 }
@@ -140,11 +142,6 @@ public struct RendererBenchmarkView: View {
         return Text(text)
             .font(.subheadline).monospacedDigit().foregroundStyle(color)
             .frame(maxWidth: .infinity, alignment: .trailing)
-    }
-
-    private func phaseText(_ row: RendererBenchmark.Row) -> String {
-        guard let g = row.geometryMs, let gpu = row.gpuMs, let o = row.overlayMs else { return "—" }
-        return String(format: "%.0f/%.0f/%.0f", g, gpu, o)
     }
 
     private func ms(_ value: Double) -> String {

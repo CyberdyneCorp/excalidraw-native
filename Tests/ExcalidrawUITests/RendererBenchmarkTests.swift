@@ -30,9 +30,11 @@ final class RendererBenchmarkTests: XCTestCase {
             RendererBenchmark.run(width: 400, height: 300, iterations: 1, configs: configs).first
         )
         XCTAssertNotNil(row.metalMs)
+        XCTAssertNotNil(row.metalDirectMs)
         XCTAssertNotNil(row.gpuMs)
-        // Ratio is defined once a Metal time exists.
+        // Both ratios are defined once the Metal times exist.
         XCTAssertNotNil(row.ratio)
+        XCTAssertNotNil(row.directRatio)
     }
 
     func testMetalAvailabilityMatchesContext() {

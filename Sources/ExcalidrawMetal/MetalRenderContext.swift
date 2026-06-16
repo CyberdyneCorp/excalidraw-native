@@ -2,6 +2,7 @@
     import CoreGraphics
     import Foundation
     import Metal
+    import QuartzCore
 
     /// Owns the Metal device, command queue and render pipeline, and rasterizes a
     /// batch of colored triangles into an off-screen `CGImage`.
@@ -23,8 +24,12 @@
         private let device: MTLDevice
         private let queue: MTLCommandQueue
         private let pipeline: MTLRenderPipelineState
+        /// Pipeline + format for presenting to a `CAMetalLayer` drawable, which
+        /// only supports `bgra8Unorm` (not the off-screen `rgba8Unorm`).
+        private let drawablePipeline: MTLRenderPipelineState
         private let sampleCount = 4
         private let pixelFormat: MTLPixelFormat = .rgba8Unorm
+        private let drawablePixelFormat: MTLPixelFormat = .bgra8Unorm
 
         // Persistent GPU resources reused across frames: the MSAA + resolve
         // render targets (rebuilt only when the pixel size changes) and a
@@ -36,16 +41,23 @@
         private var textureSize: (width: Int, height: Int)?
         private var vertexBuffer: MTLBuffer?
         private var readbackBuffer: [UInt8] = []
+        // Separate MSAA target for the present-to-drawable path (its resolve is
+        // the drawable's own texture, not our cached resolve).
+        private var drawableMSAATexture: MTLTexture?
+        private var drawableMSAASize: (width: Int, height: Int)?
 
         init?() {
             guard let device = MTLCreateSystemDefaultDevice(),
                   let queue = device.makeCommandQueue() else { return nil }
-            guard let pipeline = Self.makePipeline(device: device, sampleCount: 4, pixelFormat: .rgba8Unorm) else {
+            guard let pipeline = Self.makePipeline(device: device, sampleCount: 4, pixelFormat: .rgba8Unorm),
+                  let drawablePipeline = Self.makePipeline(device: device, sampleCount: 4, pixelFormat: .bgra8Unorm)
+            else {
                 return nil
             }
             self.device = device
             self.queue = queue
             self.pipeline = pipeline
+            self.drawablePipeline = drawablePipeline
         }
 
         /// Whether a usable Metal device exists on this host without building a
@@ -87,30 +99,81 @@
         /// Rasterize `vertices` (3 floats/vertex: x, y, packed-RGBA8) into a
         /// `pixelWidth × pixelHeight` RGBA image over `clearColor`. Returns `nil`
         /// on any GPU failure, or when there's nothing to draw (no triangles and
-        /// a transparent clear).
+        /// a transparent clear). This is the read-back path: it copies the GPU
+        /// result back to the CPU as a `CGImage` (used by the `SceneRendering`
+        /// protocol path that composites into a `CGContext`).
         func image(
             vertices: [Float], transform: Transform, clearColor: MTLClearColor,
             pixelWidth: Int, pixelHeight: Int
         ) -> CGImage? {
-            guard pixelWidth > 0, pixelHeight > 0 else { return nil }
-            let vertexCount = vertices.count / 3
-            // Nothing to paint: no triangles and a fully transparent background.
-            guard vertexCount >= 3 || clearColor.alpha > 0 else { return nil }
-
-            guard let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
+            guard hasContent(vertices, clearColor), pixelWidth > 0, pixelHeight > 0,
+                  let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
                 return nil
             }
+            runPass(
+                pipeline: pipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                msaa: msaaTexture, resolve: resolveTexture, present: nil, wait: true
+            )
+            return makeImage(from: resolveTexture, width: pixelWidth, height: pixelHeight)
+        }
 
+        /// Direct path: render into an off-screen target and let the GPU finish,
+        /// but skip the read-back/`CGImage` round-trip entirely. Returns whether
+        /// the GPU pass ran. This is what a present-to-drawable frame costs, minus
+        /// the (async) present — used to measure the read-back savings headlessly.
+        func renderNoReadback(
+            vertices: [Float], transform: Transform, clearColor: MTLClearColor,
+            pixelWidth: Int, pixelHeight: Int
+        ) -> Bool {
+            guard hasContent(vertices, clearColor), pixelWidth > 0, pixelHeight > 0,
+                  let (msaaTexture, resolveTexture) = targets(width: pixelWidth, height: pixelHeight) else {
+                return false
+            }
+            runPass(
+                pipeline: pipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                msaa: msaaTexture, resolve: resolveTexture, present: nil, wait: true
+            )
+            return true
+        }
+
+        /// On-screen path: render into `drawable.texture` and present it. No
+        /// read-back, no `CGContext` — the GPU output goes straight to the
+        /// display. `present`/`commit` are async (no `waitUntilCompleted`), so
+        /// frames pipeline.
+        func renderToDrawable(
+            _ drawable: CAMetalDrawable, vertices: [Float], transform: Transform, clearColor: MTLClearColor
+        ) {
+            let resolve = drawable.texture
+            guard let msaa = drawableMSAA(width: resolve.width, height: resolve.height) else { return }
+            runPass(
+                pipeline: drawablePipeline, vertices: vertices, transform: transform, clearColor: clearColor,
+                msaa: msaa, resolve: resolve, present: drawable, wait: false
+            )
+        }
+
+        private func hasContent(_ vertices: [Float], _ clearColor: MTLClearColor) -> Bool {
+            vertices.count / 3 >= 3 || clearColor.alpha > 0
+        }
+
+        /// Encode one MSAA render pass (clear + triangles), resolving into
+        /// `resolve`. Optionally presents `present` and/or blocks until the GPU
+        /// finishes.
+        private func runPass(
+            pipeline: MTLRenderPipelineState, vertices: [Float], transform: Transform,
+            clearColor: MTLClearColor, msaa: MTLTexture, resolve: MTLTexture,
+            present: CAMetalDrawable?, wait: Bool
+        ) {
             let pass = MTLRenderPassDescriptor()
-            pass.colorAttachments[0].texture = msaaTexture
-            pass.colorAttachments[0].resolveTexture = resolveTexture
+            pass.colorAttachments[0].texture = msaa
+            pass.colorAttachments[0].resolveTexture = resolve
             pass.colorAttachments[0].loadAction = .clear
             pass.colorAttachments[0].storeAction = .multisampleResolve
             pass.colorAttachments[0].clearColor = clearColor
 
             guard let commandBuffer = queue.makeCommandBuffer(),
-                  let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return nil }
+                  let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
 
+            let vertexCount = vertices.count / 3
             if vertexCount >= 3, let vertexBuffer = uploadVertices(vertices) {
                 var transform = transform
                 encoder.setRenderPipelineState(pipeline)
@@ -119,10 +182,23 @@
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: vertexCount)
             }
             encoder.endEncoding()
+            if let present { commandBuffer.present(present) }
             commandBuffer.commit()
-            commandBuffer.waitUntilCompleted()
+            if wait { commandBuffer.waitUntilCompleted() }
+        }
 
-            return makeImage(from: resolveTexture, width: pixelWidth, height: pixelHeight)
+        /// MSAA render target matching a drawable's size, cached and rebuilt only
+        /// when the drawable size changes.
+        private func drawableMSAA(width: Int, height: Int) -> MTLTexture? {
+            if let drawableMSAATexture, drawableMSAASize?.width == width, drawableMSAASize?.height == height {
+                return drawableMSAATexture
+            }
+            guard let msaa = makeTexture(
+                width: width, height: height, multisampled: true, format: drawablePixelFormat
+            ) else { return nil }
+            drawableMSAATexture = msaa
+            drawableMSAASize = (width, height)
+            return msaa
         }
 
         /// The MSAA + resolve render targets for `width × height`, rebuilt only
@@ -156,9 +232,11 @@
             return vertexBuffer
         }
 
-        private func makeTexture(width: Int, height: Int, multisampled: Bool) -> MTLTexture? {
+        private func makeTexture(
+            width: Int, height: Int, multisampled: Bool, format: MTLPixelFormat? = nil
+        ) -> MTLTexture? {
             let descriptor = MTLTextureDescriptor()
-            descriptor.pixelFormat = pixelFormat
+            descriptor.pixelFormat = format ?? pixelFormat
             descriptor.width = width
             descriptor.height = height
             descriptor.usage = [.renderTarget]

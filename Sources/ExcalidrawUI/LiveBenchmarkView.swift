@@ -7,11 +7,13 @@ import SwiftUI
 /// Live visual stress test: continuously renders the synthetic benchmark scene
 /// (panning + zooming every frame) with the selected backend so the elements are
 /// visible on screen while a live FPS / frame-time readout shows the cost. Lets
-/// you watch CPU vs Metal handle the same moving workload.
+/// you watch CPU vs Metal (read-back) vs Metal-Direct (straight to a Metal layer)
+/// handle the same moving workload.
 public struct LiveBenchmarkView: View {
     enum Backend: String, CaseIterable, Identifiable {
         case cpu = "CPU"
         case metal = "Metal"
+        case metalDirect = "Direct"
         var id: String {
             rawValue
         }
@@ -28,6 +30,10 @@ public struct LiveBenchmarkView: View {
 
     public init() {}
 
+    private var backends: [Backend] {
+        RendererBenchmark.metalAvailable ? Backend.allCases : [.cpu]
+    }
+
     public var body: some View {
         VStack(spacing: 8) {
             controls
@@ -41,14 +47,13 @@ public struct LiveBenchmarkView: View {
         .onChange(of: backend) { _, _ in meter.reset() }
     }
 
-    /// Readout + canvas inside one `TimelineView` so both re-evaluate every
-    /// frame: the canvas renders the moving scene and the readout shows the
-    /// latest FPS / frame time.
+    /// Readout + canvas inside one `TimelineView` so the readout re-evaluates
+    /// every frame (the Metal-Direct canvas drives its own display link).
     private var liveArea: some View {
         TimelineView(.animation) { timeline in
             VStack(spacing: 8) {
                 readout
-                canvas(at: timeline.date)
+                canvasArea(at: timeline.date)
                     .background(Color(white: 0.96))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.quaternary))
@@ -56,17 +61,28 @@ public struct LiveBenchmarkView: View {
         }
     }
 
+    @ViewBuilder
+    private func canvasArea(at date: Date) -> some View {
+        #if canImport(UIKit)
+            if backend == .metalDirect {
+                MetalCanvasView(scene: scene, theme: .light, count: count, meter: meter)
+                    .accessibilityIdentifier("live-canvas")
+            } else {
+                canvas(at: date)
+            }
+        #else
+            canvas(at: date)
+        #endif
+    }
+
     private var controls: some View {
         VStack(spacing: 8) {
             Picker("Backend", selection: $backend) {
-                ForEach(Backend.allCases) { b in
-                    Text(b.rawValue).tag(b)
-                        // Metal disabled when unavailable.
-                        .accessibilityIdentifier("live-backend-\(b.rawValue)")
+                ForEach(backends) { b in
+                    Text(b.rawValue).tag(b).accessibilityIdentifier("live-backend-\(b.rawValue)")
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(!RendererBenchmark.metalAvailable && backend == .cpu)
             Picker("Elements", selection: $count) {
                 ForEach(counts, id: \.self) { Text("\($0)").tag($0) }
             }
@@ -81,8 +97,8 @@ public struct LiveBenchmarkView: View {
             stat("frame", String(format: "%.1f ms", meter.renderMs))
             stat("elements", "\(count)")
             Spacer()
-            if backend == .metal, !RendererBenchmark.metalAvailable {
-                Text("Metal N/A").font(.caption).foregroundStyle(.orange)
+            if backend == .metalDirect {
+                Text("direct-to-drawable").font(.caption).foregroundStyle(.green)
             }
         }
         .accessibilityIdentifier("live-readout")
@@ -96,7 +112,7 @@ public struct LiveBenchmarkView: View {
     }
 
     private func canvas(at date: Date) -> some View {
-        let viewport = animatedViewport(at: date)
+        let viewport = Self.animatedViewport(at: date.timeIntervalSinceReferenceDate, count: count)
         return Canvas { context, size in
             meter.tickFrame(date)
             context.withCGContext { cg in
@@ -115,8 +131,7 @@ public struct LiveBenchmarkView: View {
 
     /// Continuously pan and zoom so every frame is a fresh full render — the
     /// point of a stress test. Oscillates within the synthetic grid's extent.
-    private func animatedViewport(at date: Date) -> Viewport {
-        let t = date.timeIntervalSinceReferenceDate
+    static func animatedViewport(at t: Double, count: Int) -> Viewport {
         let span = Double(Int(Double(count).squareRoot().rounded(.up))) * 90
         let zoom = 0.5 + 0.18 * sin(t * 0.9)
         let scrollX = -span * (0.25 + 0.2 * sin(t * 0.5))
@@ -126,17 +141,22 @@ public struct LiveBenchmarkView: View {
 }
 
 /// Smoothed frame-rate / render-time tracker. A plain reference type (not
-/// observed) updated during the `TimelineView` redraw; the timeline re-evaluates
-/// the body each frame, so the readout reflects the latest values.
+/// observed) updated during the `TimelineView` redraw (or a `CADisplayLink` for
+/// the direct path); the timeline re-evaluates the body each frame, so the
+/// readout reflects the latest values.
 final class FrameMeter {
     private(set) var fps: Double = 0
     private(set) var renderMs: Double = 0
-    private var lastDate: Date?
+    private var lastTimestamp: CFTimeInterval?
 
     func tickFrame(_ date: Date) {
-        defer { lastDate = date }
-        guard let last = lastDate else { return }
-        let dt = date.timeIntervalSince(last)
+        tickFrame(at: date.timeIntervalSinceReferenceDate)
+    }
+
+    func tickFrame(at timestamp: CFTimeInterval) {
+        defer { lastTimestamp = timestamp }
+        guard let last = lastTimestamp else { return }
+        let dt = timestamp - last
         guard dt > 0 else { return }
         let instant = 1.0 / dt
         fps = fps == 0 ? instant : fps * 0.9 + instant * 0.1
@@ -149,6 +169,6 @@ final class FrameMeter {
     func reset() {
         fps = 0
         renderMs = 0
-        lastDate = nil
+        lastTimestamp = nil
     }
 }
