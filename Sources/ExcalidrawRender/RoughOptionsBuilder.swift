@@ -36,7 +36,8 @@ public enum RoughOptionsBuilder {
             o.fill = isTransparent(base.backgroundColor) ? nil : base.backgroundColor
             if case .ellipse = element.kind { o.curveFitting = 1 }
         case let .line(props):
-            if isPathALoop(props.points) {
+            // Fill explicit polygons and any line whose path closes into a loop.
+            if props.polygon || isPathALoop(props.points) {
                 o.fillStyle = base.fillStyle.rawValue
                 o.fill = isTransparent(base.backgroundColor) ? nil : base.backgroundColor
             }

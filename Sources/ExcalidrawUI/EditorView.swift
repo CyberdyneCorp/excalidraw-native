@@ -250,6 +250,9 @@ public struct EditorView: View {
                 swatches(palette, selected: model.strokeColor, id: "stroke") { model.setStrokeColor($0) }
                 Divider().frame(height: 24)
                 swatches(fills, selected: model.backgroundColor, id: "bg") { model.setBackgroundColor($0) }
+                if model.backgroundColor != "transparent" {
+                    fillStyleControl
+                }
                 Divider().frame(height: 24)
                 Stepper("W \(Int(model.strokeWidth))", value: Binding(
                     get: { model.strokeWidth }, set: { model.setStrokeWidth($0) }
@@ -291,6 +294,25 @@ public struct EditorView: View {
     private var showArrowControls: Bool {
         model.activeTool == .arrow
             || model.controller.selectedElements.contains { if case .arrow = $0.kind { return true }; return false }
+    }
+
+    private let fillStyles: [(ExcalidrawModel.FillStyle, String, String)] = [
+        (.hachure, "Hachure", "line.diagonal"),
+        (.crossHatch, "Cross-hatch", "number"),
+        (.solid, "Solid", "square.fill"),
+        (.zigzag, "Zigzag", "scribble")
+    ]
+
+    /// Fill-pattern picker, shown when a fill colour is set.
+    private var fillStyleControl: some View {
+        Menu {
+            ForEach(fillStyles, id: \.0) { style, name, icon in
+                Button { model.setFillStyle(style) } label: { Label(name, systemImage: icon) }
+            }
+        } label: {
+            Image(systemName: fillStyles.first { $0.0 == model.fillStyle }?.2 ?? "square.fill")
+        }
+        .accessibilityIdentifier("fill-style")
     }
 
     @ViewBuilder

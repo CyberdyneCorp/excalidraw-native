@@ -87,6 +87,27 @@ final class RenderIntegrationTests: XCTestCase {
         XCTAssertEqual(RoughOptionsBuilder.options(for: freeEl).fill, "#b2f2bb")
     }
 
+    func testPolygonFlaggedLineGetsFillWithoutClosingPoint() {
+        // A polygon-flagged line whose endpoints don't coincide should still fill.
+        let openPts = [Point(0, 0), Point(50, 0), Point(25, 40)]
+        let props = LinearProperties(points: openPts, polygon: true)
+        let line = RoughOptionsBuilder.options(for: element(.line(props), bg: "#ffc9c9"))
+        XCTAssertEqual(line.fill, "#ffc9c9")
+        // A non-polygon open line stays unfilled.
+        let openLine = RoughOptionsBuilder.options(for: element(
+            .line(LinearProperties(points: openPts)),
+            bg: "#ffc9c9"
+        ))
+        XCTAssertNil(openLine.fill)
+    }
+
+    func testFillStyleCarriesIntoOptions() {
+        let loopPts = [Point(0, 0), Point(50, 0), Point(50, 50), Point(0, 0)]
+        var el = element(.line(LinearProperties(points: loopPts)), bg: "#b2f2bb")
+        el.base.fillStyle = .crossHatch
+        XCTAssertEqual(RoughOptionsBuilder.options(for: el).fillStyle, "cross-hatch")
+    }
+
     func testShapeCacheRemoveAll() {
         let cache = ShapeCache()
         _ = cache.drawable(for: element(.rectangle))
