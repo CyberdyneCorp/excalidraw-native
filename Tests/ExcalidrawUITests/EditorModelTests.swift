@@ -174,6 +174,21 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
     }
 
+    func testThemeAndZenToggles() {
+        let m = EditorModel()
+        XCTAssertEqual(m.theme, .light)
+        m.toggleTheme()
+        XCTAssertEqual(m.theme, .dark)
+        XCTAssertFalse(m.zenMode)
+        m.toggleZenMode()
+        XCTAssertTrue(m.zenMode)
+    }
+
+    func testZoomPercent() {
+        let m = EditorModel(viewport: Viewport(zoom: 1.5))
+        XCTAssertEqual(m.zoomPercent, 150)
+    }
+
     func testExport() {
         let m = EditorModel()
         XCTAssertNil(m.exportPNG()) // empty scene

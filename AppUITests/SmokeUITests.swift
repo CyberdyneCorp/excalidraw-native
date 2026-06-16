@@ -33,6 +33,13 @@ final class SmokeUITests: XCTestCase {
             app.buttons["text-done"].tap()
         }
 
+        // Footer controls: zoom and dark mode.
+        if app.buttons["zoom-in"].waitForExistence(timeout: 5) {
+            app.buttons["zoom-in"].tap()
+            app.buttons["theme-toggle"].tap()
+            app.buttons["zoom-fit"].tap()
+        }
+
         // Export and confirm.
         app.buttons["export"].tap()
         XCTAssertTrue(app.staticTexts["exported-confirmation"].waitForExistence(timeout: 5))

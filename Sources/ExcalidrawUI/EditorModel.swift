@@ -32,6 +32,14 @@ public final class EditorModel: ObservableObject {
     /// Local clipboard fallback when no system pasteboard is wired.
     var clipboard: Data?
 
+    @Published public var theme: Theme = .light
+    @Published public var zenMode = false
+    @Published public var showCommandPalette = false
+
+    public func toggleTheme() { theme = theme == .light ? .dark : .light; revision += 1 }
+    public func toggleZenMode() { zenMode.toggle() }
+    public var zoomPercent: Int { Int((viewport.zoom * 100).rounded()) }
+
     public init(scene: ExcalidrawModel.Scene = ExcalidrawModel.Scene(), viewport: Viewport = Viewport()) {
         controller = EditorController(scene: scene)
         controller.zoom = viewport.zoom

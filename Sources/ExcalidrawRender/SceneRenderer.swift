@@ -54,10 +54,25 @@ public final class SceneRenderer {
         self.imageDecoder = imageDecoder
     }
 
-    public func render(_ scene: Scene, in ctx: CGContext, viewport: Viewport, size: CGSize) {
-        // Background.
-        let background = scene.appState.viewBackgroundColor.flatMap(ColorParser.cgColor)
-            ?? CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+    private var theme: Theme = .light
+
+    /// Parse a colour string and apply the current theme filter.
+    private func themed(_ string: String) -> CGColor {
+        let base = ColorParser.cgColor(string) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        return ThemeFilter.apply(base, theme: theme)
+    }
+
+    public func render(_ scene: Scene, in ctx: CGContext, viewport: Viewport, size: CGSize, theme: Theme = .light) {
+        self.theme = theme
+        // Background: a user-set colour is theme-filtered (white→dark); the
+        // default canvas colour is used directly so it isn't double-inverted.
+        let background: CGColor
+        if let userBackground = scene.appState.viewBackgroundColor {
+            background = themed(userBackground)
+        } else {
+            background = ColorParser.cgColor(theme == .dark ? "#121212" : "#ffffff")
+                ?? CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+        }
         ctx.setFillColor(background)
         ctx.fill(CGRect(origin: .zero, size: size))
 
@@ -92,7 +107,7 @@ public final class SceneRenderer {
 
         switch element.kind {
         case let .text(text):
-            let color = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+            let color = themed(base.strokeColor)
             TextLayout.draw(text, base: base, in: ctx, color: color)
         case let .image(image):
             drawImage(image, base: base, in: ctx, files: files)
@@ -113,7 +128,7 @@ public final class SceneRenderer {
     private func drawArrowheads(_ props: ArrowProperties, base: BaseProperties, in ctx: CGContext) {
         let pts = props.points
         guard pts.count >= 2 else { return }
-        let stroke = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        let stroke = themed(base.strokeColor)
         if let head = props.endArrowhead {
             drawArrowhead(
                 at: pts[pts.count - 1], from: pts[pts.count - 2],
@@ -163,8 +178,8 @@ public final class SceneRenderer {
     }
 
     private func drawDrawable(_ drawable: Drawable, base: BaseProperties, in ctx: CGContext) {
-        let strokeColor = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
-        let fillColor = drawable.options.fill.flatMap(ColorParser.cgColor)
+        let strokeColor = themed(base.strokeColor)
+        let fillColor = drawable.options.fill.map { themed($0) }
 
         for set in drawable.sets {
             let path = RoughPath.cgPath(from: set.ops)
@@ -198,7 +213,7 @@ public final class SceneRenderer {
 
     private func drawFreedraw(_ props: FreedrawProperties, base: BaseProperties, in ctx: CGContext) {
         guard !props.points.isEmpty else { return }
-        let strokeColor = ColorParser.cgColor(base.strokeColor) ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        let strokeColor = themed(base.strokeColor)
         let inputs = props.points.enumerated().map { index, p in
             FreehandPoint(x: p.x, y: p.y, pressure: index < props.pressures.count ? props.pressures[index] : 0.5)
         }
