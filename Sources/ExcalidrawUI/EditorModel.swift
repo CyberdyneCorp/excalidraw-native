@@ -64,10 +64,16 @@ public final class EditorModel: ObservableObject {
         return "\(Int(bounds.width.rounded())) × \(Int(bounds.height.rounded()))"
     }
 
-    public init(scene: ExcalidrawModel.Scene = ExcalidrawModel.Scene(), viewport: Viewport = Viewport()) {
+    public init(
+        scene: ExcalidrawModel.Scene = ExcalidrawModel.Scene(),
+        viewport: Viewport = Viewport(),
+        libraryStore: LibraryStore? = nil
+    ) {
         controller = EditorController(scene: scene)
         controller.zoom = viewport.zoom
         self.viewport = viewport
+        self.libraryStore = libraryStore ?? LibraryStore.defaultStore()
+        library = (try? self.libraryStore.load()) ?? []
     }
 
     // MARK: Pointer input (view coordinates in)
@@ -339,12 +345,37 @@ public final class EditorModel: ObservableObject {
 
     @Published public var library: [[ExcalidrawElement]] = []
     @Published public var showLibrary = false
+    private let libraryStore: LibraryStore
 
     /// Add the current selection to the library as a reusable item.
     public func addSelectionToLibrary() {
         let elements = controller.selectedElements
         guard !elements.isEmpty else { return }
         library.append(elements)
+        persistLibrary()
+    }
+
+    /// Remove library item `index` and persist.
+    public func removeLibraryItem(_ index: Int) {
+        guard library.indices.contains(index) else { return }
+        library.remove(at: index)
+        persistLibrary()
+    }
+
+    /// Merge items from an imported `.excalidrawlib` payload and persist.
+    public func importLibrary(_ data: Data) throws {
+        let imported = try ExcalidrawLibrary.decode(from: data).items
+        library.append(contentsOf: imported)
+        persistLibrary()
+    }
+
+    /// Serialize the whole library as an `.excalidrawlib` payload for export.
+    public func exportLibraryData() -> Data? {
+        try? ExcalidrawLibrary(items: library).encoded()
+    }
+
+    private func persistLibrary() {
+        try? libraryStore.save(library)
     }
 
     /// Stamp library item `index` near the centre of the canvas.

@@ -201,8 +201,14 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m2.controller.scene.visibleElements.count, 1)
     }
 
+    private func tempStore() -> LibraryStore {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("lib-\(UUID().uuidString).excalidrawlib")
+        return LibraryStore(url: url)
+    }
+
     func testLibraryAddAndStamp() {
-        let m = EditorModel()
+        let m = EditorModel(libraryStore: tempStore())
         m.canvasSize = CGSize(width: 400, height: 400)
         m.select(tool: .rectangle)
         draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 50, y: 50))
@@ -215,6 +221,35 @@ final class EditorModelTests: XCTestCase {
         m.stampLibraryItem(0)
         XCTAssertEqual(m.controller.scene.visibleElements.count, before + 1)
         XCTAssertFalse(m.showLibrary)
+    }
+
+    func testLibraryPersistsAcrossInstances() {
+        let store = tempStore()
+        let m = EditorModel(libraryStore: store)
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 50, y: 50))
+        m.controller.selectAll()
+        m.addSelectionToLibrary()
+
+        // A fresh model backed by the same store reloads the saved item.
+        let reloaded = EditorModel(libraryStore: store)
+        XCTAssertEqual(reloaded.library.count, 1)
+
+        m.removeLibraryItem(0)
+        XCTAssertTrue(EditorModel(libraryStore: store).library.isEmpty)
+    }
+
+    func testLibraryImportExportRoundTrip() throws {
+        let m = EditorModel(libraryStore: tempStore())
+        m.select(tool: .rectangle)
+        draw(m, from: CGPoint(x: 0, y: 0), to: CGPoint(x: 50, y: 50))
+        m.controller.selectAll()
+        m.addSelectionToLibrary()
+        let data = try XCTUnwrap(m.exportLibraryData())
+
+        let other = EditorModel(libraryStore: tempStore())
+        try other.importLibrary(data)
+        XCTAssertEqual(other.library.count, 1)
     }
 
     func testLinkPromptAndCommit() {

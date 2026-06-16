@@ -3,6 +3,7 @@ import ExcalidrawModel
 import ExcalidrawRender
 import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The adaptive single-user editor. The tool/action toolbar sits at the top on
 /// regular widths (iPad) and the bottom on compact widths (iPhone). A footer
@@ -13,6 +14,8 @@ public struct EditorView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var exported = false
     @State private var photoItem: PhotosPickerItem?
+    @State private var importingLibrary = false
+    @State private var exportingLibrary = false
     @FocusState private var canvasFocused: Bool
 
     private let tools: [(Tool, String)] = [
@@ -85,9 +88,26 @@ public struct EditorView: View {
             .toolbar {
                 Button("Add") { model.addSelectionToLibrary() }
                     .accessibilityIdentifier("library-add")
+                Menu {
+                    Button("Import…") { importingLibrary = true }
+                    Button("Export…") { exportingLibrary = true }.disabled(model.library.isEmpty)
+                } label: {
+                    Image(systemName: "square.and.arrow.up.on.square")
+                }.accessibilityIdentifier("library-share")
                 Button("Done") { model.showLibrary = false }
             }
         }
+        .fileImporter(isPresented: $importingLibrary, allowedContentTypes: [.json, .item]) { result in
+            guard let url = try? result.get(), url.startAccessingSecurityScopedResource() else { return }
+            defer { url.stopAccessingSecurityScopedResource() }
+            if let data = try? Data(contentsOf: url) { try? model.importLibrary(data) }
+        }
+        .fileExporter(
+            isPresented: $exportingLibrary,
+            document: LibraryDocument(data: model.exportLibraryData() ?? Data()),
+            contentType: .json,
+            defaultFilename: "library.excalidrawlib"
+        ) { _ in }
     }
 
     // MARK: Toolbar
@@ -366,6 +386,27 @@ public struct EditorView: View {
                 model.insertImage(data: data, mimeType: "image/png", viewSize: model.canvasSize)
             }
         }
+    }
+}
+
+/// A minimal JSON-backed document used to export the library via `.fileExporter`.
+struct LibraryDocument: FileDocument {
+    static var readableContentTypes: [UTType] {
+        [.json]
+    }
+
+    var data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration _: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }
 
