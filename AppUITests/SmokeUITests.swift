@@ -71,6 +71,26 @@ final class SmokeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    func testStrokeWidthAndColors() {
+        // Draw a rectangle (it stays selected), then restyle it: stroke colour,
+        // fill colour, and stroke width.
+        tap("tool-rectangle")
+        drag(CGVector(dx: 0.3, dy: 0.3), CGVector(dx: 0.6, dy: 0.55))
+
+        tap("stroke-#e03131") // red stroke
+        tap("bg-#a5d8ff") // blue fill
+
+        // Bump the stroke width via the stepper's increment.
+        let stepper = app.steppers["stroke-width"]
+        if stepper.waitForExistence(timeout: 5) {
+            let increment = stepper.buttons["Increment"]
+            if increment.exists { increment.tap(); increment.tap() } else { stepper.tap() }
+        }
+
+        app.buttons["export"].tap()
+        XCTAssertTrue(app.staticTexts["exported-confirmation"].waitForExistence(timeout: 5))
+    }
+
     func testMovePanAndZoom() {
         // Draw a rectangle, then move it with the selection tool (exercises the
         // static/dynamic layered render path).

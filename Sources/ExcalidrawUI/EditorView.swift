@@ -277,7 +277,7 @@ public struct EditorView: View {
                 Divider().frame(height: 24)
                 Stepper("W \(Int(model.strokeWidth))", value: Binding(
                     get: { model.strokeWidth }, set: { model.setStrokeWidth($0) }
-                ), in: 1 ... 20).fixedSize()
+                ), in: 1 ... 20).fixedSize().accessibilityIdentifier("stroke-width")
                 Divider().frame(height: 24)
                 sloppinessControl
                 edgesControl
