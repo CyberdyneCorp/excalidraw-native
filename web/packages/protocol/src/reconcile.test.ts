@@ -1,4 +1,4 @@
-import { type ExcalidrawElement, defaultBase } from "@cyberdynecorpai/model";
+import { type ExcalidrawElement, defaultBase } from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import {
   changedByReconcile,

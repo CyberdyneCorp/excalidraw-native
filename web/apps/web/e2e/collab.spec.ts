@@ -1,4 +1,4 @@
-import { type RelayHandle, startRelay } from "@cyberdynecorpai/server";
+import { type RelayHandle, startRelay } from "@cyberdynecorp/server";
 import { type Page, expect, test } from "@playwright/test";
 import { drag, read, ready } from "./helpers.js";
 

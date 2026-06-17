@@ -1,7 +1,7 @@
 import ExcalidrawModel
 
 /// Element reconciliation — the deterministic, symmetric last-writer-wins rule
-/// shared bit-for-bit with the TypeScript `@cyberdynecorpai/protocol` `reconcile`: higher
+/// shared bit-for-bit with the TypeScript `@cyberdynecorp/protocol` `reconcile`: higher
 /// `version` wins; ties break on the lower `versionNonce`. Both clients converge
 /// on the same element with no central authority or CRDT.
 public enum Reconcile {

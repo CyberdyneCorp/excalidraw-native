@@ -1,4 +1,4 @@
-# @cyberdynecorpai/server
+# @cyberdynecorp/server
 
 WebSocket relay server for collaboration — rooms, presence, and version-reconciled scene sync.
 
@@ -7,7 +7,7 @@ Part of the **[Excalidraw — Native Swift + TypeScript/Svelte port](https://git
 ## Install
 
 ```sh
-npm install @cyberdynecorpai/server
+npm install @cyberdynecorp/server
 ```
 
 ESM-only. See the [monorepo README](https://github.com/leonardoaraujosantos/excalidraw-swift#readme) for the full package list and usage.

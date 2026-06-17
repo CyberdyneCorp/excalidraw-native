@@ -1,4 +1,4 @@
-import { Point } from "@cyberdynecorpai/math";
+import { Point } from "@cyberdynecorp/math";
 import { describe, expect, it } from "vitest";
 import { EditorStore } from "./editor-store.js";
 import { TrailStore } from "./trail-store.js";

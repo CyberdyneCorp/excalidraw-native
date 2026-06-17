@@ -27,23 +27,23 @@ importers:
 
   apps/web:
     dependencies:
-      '@cyberdynecorpai/editor':
+      '@cyberdynecorp/editor':
         specifier: workspace:*
         version: link:../../packages/editor
-      '@cyberdynecorpai/math':
+      '@cyberdynecorp/math':
         specifier: workspace:*
         version: link:../../packages/math
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../../packages/model
-      '@cyberdynecorpai/render':
+      '@cyberdynecorp/render':
         specifier: workspace:*
         version: link:../../packages/render
-      '@cyberdynecorpai/svelte':
+      '@cyberdynecorp/svelte':
         specifier: workspace:*
         version: link:../../packages/svelte
     devDependencies:
-      '@cyberdynecorpai/server':
+      '@cyberdynecorp/server':
         specifier: workspace:*
         version: link:../../server
       '@playwright/test':
@@ -67,13 +67,13 @@ importers:
 
   packages/editor:
     dependencies:
-      '@cyberdynecorpai/geometry':
+      '@cyberdynecorp/geometry':
         specifier: workspace:*
         version: link:../geometry
-      '@cyberdynecorpai/math':
+      '@cyberdynecorp/math':
         specifier: workspace:*
         version: link:../math
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../model
     devDependencies:
@@ -83,10 +83,10 @@ importers:
 
   packages/geometry:
     dependencies:
-      '@cyberdynecorpai/math':
+      '@cyberdynecorp/math':
         specifier: workspace:*
         version: link:../math
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../model
     devDependencies:
@@ -108,7 +108,7 @@ importers:
 
   packages/protocol:
     dependencies:
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../model
     devDependencies:
@@ -118,13 +118,13 @@ importers:
 
   packages/render:
     dependencies:
-      '@cyberdynecorpai/geometry':
+      '@cyberdynecorp/geometry':
         specifier: workspace:*
         version: link:../geometry
-      '@cyberdynecorpai/math':
+      '@cyberdynecorp/math':
         specifier: workspace:*
         version: link:../math
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../model
       perfect-freehand:
@@ -140,26 +140,26 @@ importers:
 
   packages/svelte:
     dependencies:
-      '@cyberdynecorpai/editor':
+      '@cyberdynecorp/editor':
         specifier: workspace:*
         version: link:../editor
-      '@cyberdynecorpai/geometry':
+      '@cyberdynecorp/geometry':
         specifier: workspace:*
         version: link:../geometry
-      '@cyberdynecorpai/math':
+      '@cyberdynecorp/math':
         specifier: workspace:*
         version: link:../math
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../model
-      '@cyberdynecorpai/protocol':
+      '@cyberdynecorp/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@cyberdynecorpai/render':
+      '@cyberdynecorp/render':
         specifier: workspace:*
         version: link:../render
     devDependencies:
-      '@cyberdynecorpai/server':
+      '@cyberdynecorp/server':
         specifier: workspace:*
         version: link:../../server
       '@types/ws':
@@ -174,10 +174,10 @@ importers:
 
   server:
     dependencies:
-      '@cyberdynecorpai/model':
+      '@cyberdynecorp/model':
         specifier: workspace:*
         version: link:../packages/model
-      '@cyberdynecorpai/protocol':
+      '@cyberdynecorp/protocol':
         specifier: workspace:*
         version: link:../packages/protocol
       ws:

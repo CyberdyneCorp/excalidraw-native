@@ -1,7 +1,7 @@
 import ExcalidrawModel
 import Foundation
 
-/// Wire protocol version (must match `@cyberdynecorpai/protocol`'s `PROTOCOL_VERSION`).
+/// Wire protocol version (must match `@cyberdynecorp/protocol`'s `PROTOCOL_VERSION`).
 public let protocolVersion = 1
 
 /// A collaborator's stable identity (cursor + roster entry).
@@ -58,7 +58,7 @@ public struct Presence: Equatable, Sendable, Codable {
 }
 
 /// The collaboration messages, discriminated by a string `type` tag. The wire
-/// format is byte-identical to the TypeScript `@cyberdynecorpai/protocol` `Message` union.
+/// format is byte-identical to the TypeScript `@cyberdynecorp/protocol` `Message` union.
 public enum CollabMessage: Equatable, Sendable {
     case join(protocolVersion: Int, room: String, peer: Peer)
     case leave(peerId: String)

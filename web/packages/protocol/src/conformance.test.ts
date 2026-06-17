@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type ExcalidrawElement, defaultBase, defaultTextProps } from "@cyberdynecorpai/model";
+import { type ExcalidrawElement, defaultBase, defaultTextProps } from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import { canonicalEncode, decode } from "./codec.js";
 import { type Message, PROTOCOL_VERSION, type Peer } from "./messages.js";

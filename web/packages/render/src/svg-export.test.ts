@@ -1,4 +1,4 @@
-import { Scene } from "@cyberdynecorpai/model";
+import { Scene } from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import { exportSvg } from "./svg-export.js";
 import { rect, text } from "./test-helpers.js";

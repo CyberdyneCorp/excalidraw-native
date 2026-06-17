@@ -1,5 +1,5 @@
-import { BoundingBox } from "@cyberdynecorpai/geometry";
-import { Point } from "@cyberdynecorpai/math";
+import { BoundingBox } from "@cyberdynecorp/geometry";
+import { Point } from "@cyberdynecorp/math";
 import { describe, expect, it } from "vitest";
 import { renderOverlay } from "./overlay.js";
 import type { RenderContext } from "./scene-renderer.js";

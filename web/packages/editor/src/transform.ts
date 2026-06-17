@@ -1,6 +1,6 @@
-import { BoundingBox } from "@cyberdynecorpai/geometry";
-import { Point, normalizeRadians } from "@cyberdynecorpai/math";
-import type { ExcalidrawElement } from "@cyberdynecorpai/model";
+import { BoundingBox } from "@cyberdynecorp/geometry";
+import { Point, normalizeRadians } from "@cyberdynecorp/math";
+import type { ExcalidrawElement } from "@cyberdynecorp/model";
 
 /** The resize/rotate handles around a selection's bounding box. */
 export type TransformHandle =

@@ -5,7 +5,7 @@ import {
   FontFamily,
   type StrokeStyle,
   defaultBase,
-} from "@cyberdynecorpai/model";
+} from "@cyberdynecorp/model";
 
 /**
  * Style properties applied to newly created elements, mirroring the

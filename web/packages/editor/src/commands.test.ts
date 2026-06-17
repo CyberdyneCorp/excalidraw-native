@@ -1,5 +1,5 @@
-import { Point } from "@cyberdynecorpai/math";
-import { type ExcalidrawElement, Scene, decodeFile, defaultBase } from "@cyberdynecorpai/model";
+import { Point } from "@cyberdynecorp/math";
+import { type ExcalidrawElement, Scene, decodeFile, defaultBase } from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import { EditorController } from "./controller.js";
 import { drag, makeEditor } from "./test-helpers.js";

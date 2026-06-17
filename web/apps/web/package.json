@@ -12,16 +12,16 @@
     "e2e:report": "playwright show-report"
   },
   "dependencies": {
-    "@cyberdynecorpai/editor": "workspace:*",
-    "@cyberdynecorpai/math": "workspace:*",
-    "@cyberdynecorpai/model": "workspace:*",
-    "@cyberdynecorpai/render": "workspace:*",
-    "@cyberdynecorpai/svelte": "workspace:*"
+    "@cyberdynecorp/editor": "workspace:*",
+    "@cyberdynecorp/math": "workspace:*",
+    "@cyberdynecorp/model": "workspace:*",
+    "@cyberdynecorp/render": "workspace:*",
+    "@cyberdynecorp/svelte": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@cyberdynecorpai/server": "workspace:*",
+    "@cyberdynecorp/server": "workspace:*",
     "svelte": "^5.19.0",
     "svelte-check": "^4.1.4",
     "typescript": "^5.7.2",

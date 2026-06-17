@@ -1,5 +1,5 @@
-import { isPathALoop } from "@cyberdynecorpai/geometry";
-import type { ExcalidrawElement } from "@cyberdynecorpai/model";
+import { isPathALoop } from "@cyberdynecorp/geometry";
+import type { ExcalidrawElement } from "@cyberdynecorp/model";
 import type { Options } from "roughjs/bin/core";
 
 const CARTOONIST_ROUGHNESS = 2;

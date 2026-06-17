@@ -1,4 +1,4 @@
-import { Point } from "@cyberdynecorpai/math";
+import { Point } from "@cyberdynecorp/math";
 
 /** The allowed zoom range. */
 export const ZOOM_RANGE = { min: 0.1, max: 30 } as const;

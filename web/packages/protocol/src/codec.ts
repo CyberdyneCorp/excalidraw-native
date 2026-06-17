@@ -1,4 +1,4 @@
-import { canonicalJSON } from "@cyberdynecorpai/model";
+import { canonicalJSON } from "@cyberdynecorp/model";
 import { MESSAGE_TYPES, type Message, type MessageType } from "./messages.js";
 
 const TYPES = new Set<string>(MESSAGE_TYPES);

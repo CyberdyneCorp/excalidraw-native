@@ -1,4 +1,4 @@
-import { Scene } from "@cyberdynecorpai/model";
+import { Scene } from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import { containsScene, crc32, embedScene, extractScene } from "./png-embed.js";
 import { rect } from "./test-helpers.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@cyberdynecorpai/geometry",
+  "name": "@cyberdynecorp/geometry",
   "version": "0.1.0",
   "description": "Element-aware geometry — bounds, hit-testing, binding, snapping, culling — ported from ExcalidrawGeometry.",
   "type": "module",
@@ -16,8 +16,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@cyberdynecorpai/math": "workspace:*",
-    "@cyberdynecorpai/model": "workspace:*"
+    "@cyberdynecorp/math": "workspace:*",
+    "@cyberdynecorp/model": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
@@ -34,6 +34,6 @@
   "files": ["dist", "README.md"],
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -1,4 +1,4 @@
-import { Point } from "@cyberdynecorpai/math";
+import { Point } from "@cyberdynecorp/math";
 import type { BoundingBox } from "./bounding-box.js";
 
 function ellipseParams(box: BoundingBox): { cx: number; cy: number; rx: number; ry: number } {

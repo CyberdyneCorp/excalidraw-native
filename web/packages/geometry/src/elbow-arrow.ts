@@ -1,4 +1,4 @@
-import { Point, Vector } from "@cyberdynecorpai/math";
+import { Point, Vector } from "@cyberdynecorp/math";
 import { BoundingBox } from "./bounding-box.js";
 import {
   type Heading,

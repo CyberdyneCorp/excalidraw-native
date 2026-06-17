@@ -1,7 +1,7 @@
 {
-  "name": "@cyberdynecorpai/svelte",
+  "name": "@cyberdynecorp/svelte",
   "version": "0.1.0",
-  "description": "Reactive editor store + Svelte 5 bridge over @cyberdynecorpai/editor and @cyberdynecorpai/render.",
+  "description": "Reactive editor store + Svelte 5 bridge over @cyberdynecorp/editor and @cyberdynecorp/render.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,16 +16,16 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@cyberdynecorpai/editor": "workspace:*",
-    "@cyberdynecorpai/geometry": "workspace:*",
-    "@cyberdynecorpai/math": "workspace:*",
-    "@cyberdynecorpai/model": "workspace:*",
-    "@cyberdynecorpai/protocol": "workspace:*",
-    "@cyberdynecorpai/render": "workspace:*"
+    "@cyberdynecorp/editor": "workspace:*",
+    "@cyberdynecorp/geometry": "workspace:*",
+    "@cyberdynecorp/math": "workspace:*",
+    "@cyberdynecorp/model": "workspace:*",
+    "@cyberdynecorp/protocol": "workspace:*",
+    "@cyberdynecorp/render": "workspace:*"
   },
   "devDependencies": {
     "@types/ws": "^8.5.13",
-    "@cyberdynecorpai/server": "workspace:*",
+    "@cyberdynecorp/server": "workspace:*",
     "typescript": "^5.7.2",
     "ws": "^8.18.0"
   },
@@ -41,6 +41,6 @@
   "files": ["dist", "README.md"],
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

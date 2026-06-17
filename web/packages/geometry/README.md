@@ -1,4 +1,4 @@
-# @cyberdynecorpai/geometry
+# @cyberdynecorp/geometry
 
 Element-aware geometry — bounds, hit-testing, binding, snapping, culling — ported from ExcalidrawGeometry.
 
@@ -7,7 +7,7 @@ Part of the **[Excalidraw — Native Swift + TypeScript/Svelte port](https://git
 ## Install
 
 ```sh
-npm install @cyberdynecorpai/geometry
+npm install @cyberdynecorp/geometry
 ```
 
 ESM-only. See the [monorepo README](https://github.com/leonardoaraujosantos/excalidraw-swift#readme) for the full package list and usage.

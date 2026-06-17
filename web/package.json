@@ -13,7 +13,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "build:libs": "pnpm -r --filter \"./packages/*\" --filter \"./server\" run build",
-    "publish:libs": "pnpm -r --filter \"./packages/*\" --filter \"./server\" publish --access public"
+    "publish:libs": "pnpm -r --filter \"./packages/*\" --filter \"./server\" publish --no-git-checks"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

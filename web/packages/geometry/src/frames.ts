@@ -1,5 +1,5 @@
-import { Point } from "@cyberdynecorpai/math";
-import type { ExcalidrawElement } from "@cyberdynecorpai/model";
+import { Point } from "@cyberdynecorp/math";
+import type { ExcalidrawElement } from "@cyberdynecorp/model";
 import { bounds } from "./element-geometry.js";
 
 /** Frame membership helpers (`frame.ts`, simplified). (parity: Frames.swift) */

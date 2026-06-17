@@ -1,6 +1,6 @@
-import { Point } from "@cyberdynecorpai/math";
-import { type ExcalidrawElement, defaultBase } from "@cyberdynecorpai/model";
-import { type Message, decode, encode, message } from "@cyberdynecorpai/protocol";
+import { Point } from "@cyberdynecorp/math";
+import { type ExcalidrawElement, defaultBase } from "@cyberdynecorp/model";
+import { type Message, decode, encode, message } from "@cyberdynecorp/protocol";
 import { describe, expect, it } from "vitest";
 import type { CollabSocket } from "./collab-session.js";
 import { EditorStore } from "./editor-store.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Tool } from "@cyberdynecorpai/editor";
-  import type { FillStyle } from "@cyberdynecorpai/model";
-  import { EditorStore, browserSocket, reconnectingSocket } from "@cyberdynecorpai/svelte";
+  import type { Tool } from "@cyberdynecorp/editor";
+  import type { FillStyle } from "@cyberdynecorp/model";
+  import { EditorStore, browserSocket, reconnectingSocket } from "@cyberdynecorp/svelte";
   import Canvas from "./lib/Canvas.svelte";
 
   const store = new EditorStore();

@@ -1,5 +1,5 @@
 {
-  "name": "@cyberdynecorpai/render",
+  "name": "@cyberdynecorp/render",
   "version": "0.1.0",
   "description": "Canvas2D scene renderer, rough.js drawables, and SVG/PNG export — ported from ExcalidrawRender.",
   "type": "module",
@@ -16,9 +16,9 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@cyberdynecorpai/geometry": "workspace:*",
-    "@cyberdynecorpai/math": "workspace:*",
-    "@cyberdynecorpai/model": "workspace:*",
+    "@cyberdynecorp/geometry": "workspace:*",
+    "@cyberdynecorp/math": "workspace:*",
+    "@cyberdynecorp/model": "workspace:*",
     "perfect-freehand": "^1.2.2",
     "roughjs": "^4.6.6"
   },
@@ -37,6 +37,6 @@
   "files": ["dist", "README.md"],
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

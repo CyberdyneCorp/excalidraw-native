@@ -1,4 +1,4 @@
-import { Point } from "@cyberdynecorpai/math";
+import { Point } from "@cyberdynecorp/math";
 import { BoundingBox } from "./bounding-box.js";
 import { ShapeGenerator } from "./shape-generator.js";
 

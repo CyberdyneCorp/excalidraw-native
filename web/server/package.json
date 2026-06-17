@@ -1,5 +1,5 @@
 {
-  "name": "@cyberdynecorpai/server",
+  "name": "@cyberdynecorp/server",
   "version": "0.1.0",
   "description": "WebSocket relay server for collaboration — rooms, presence, and version-reconciled scene sync.",
   "type": "module",
@@ -16,8 +16,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@cyberdynecorpai/model": "workspace:*",
-    "@cyberdynecorpai/protocol": "workspace:*",
+    "@cyberdynecorp/model": "workspace:*",
+    "@cyberdynecorp/protocol": "workspace:*",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -38,6 +38,6 @@
   "files": ["dist", "README.md"],
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "registry": "https://npm.pkg.github.com"
   }
 }

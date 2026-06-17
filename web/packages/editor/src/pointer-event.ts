@@ -1,4 +1,4 @@
-import type { Point } from "@cyberdynecorpai/math";
+import type { Point } from "@cyberdynecorp/math";
 
 export type PointerType = "mouse" | "pen" | "touch";
 export type PointerPhase = "down" | "move" | "up";

@@ -4,7 +4,7 @@ import {
   type StrokeStyle,
   defaultBase,
   defaultTextProps,
-} from "@cyberdynecorpai/model";
+} from "@cyberdynecorp/model";
 
 interface Opts {
   x?: number;

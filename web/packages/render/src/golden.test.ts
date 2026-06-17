@@ -7,7 +7,7 @@ import {
   SceneDocument,
   defaultBase,
   defaultTextProps,
-} from "@cyberdynecorpai/model";
+} from "@cyberdynecorp/model";
 import { describe, expect, it } from "vitest";
 import { exportSvg } from "./svg-export.js";
 

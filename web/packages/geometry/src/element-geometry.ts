@@ -1,5 +1,5 @@
-import { Point } from "@cyberdynecorpai/math";
-import type { ExcalidrawElement, LocalPoint } from "@cyberdynecorpai/model";
+import { Point } from "@cyberdynecorp/math";
+import type { ExcalidrawElement, LocalPoint } from "@cyberdynecorp/model";
 import { BoundingBox } from "./bounding-box.js";
 
 export const LINE_CONFIRM_THRESHOLD = 40;
