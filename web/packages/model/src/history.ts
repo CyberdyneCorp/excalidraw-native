@@ -115,6 +115,15 @@ export class Store {
     body(this.scene);
   }
 
+  /**
+   * Advance the undo baseline to the current scene *without* recording a step —
+   * used after applying a remote collaborative update so it doesn't fold into
+   * the local user's next undo.
+   */
+  rebase(): void {
+    this.snapshot = this.scene.elements;
+  }
+
   /** Capture changes since the last commit as one undo step. */
   commit(): void {
     const delta = SceneDelta.between(this.snapshot, this.scene.elements);

@@ -16,9 +16,13 @@
     "@xs/geometry": "workspace:*",
     "@xs/math": "workspace:*",
     "@xs/model": "workspace:*",
+    "@xs/protocol": "workspace:*",
     "@xs/render": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "@types/ws": "^8.5.13",
+    "@xs/server": "workspace:*",
+    "typescript": "^5.7.2",
+    "ws": "^8.18.0"
   }
 }

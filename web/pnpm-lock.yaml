@@ -149,13 +149,25 @@ importers:
       '@xs/model':
         specifier: workspace:*
         version: link:../model
+      '@xs/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@xs/render':
         specifier: workspace:*
         version: link:../render
     devDependencies:
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.18.1
+      '@xs/server':
+        specifier: workspace:*
+        version: link:../../server
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      ws:
+        specifier: ^8.18.0
+        version: 8.21.0
 
   server:
     dependencies:

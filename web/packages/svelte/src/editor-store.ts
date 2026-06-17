@@ -15,6 +15,8 @@ import {
   SceneDocument,
   type StrokeStyle,
 } from "@xs/model";
+import type { Peer } from "@xs/protocol";
+import { reconcileElements } from "@xs/protocol";
 import {
   type RenderContext,
   type Theme,
@@ -24,6 +26,7 @@ import {
   exportSvg,
   renderScene,
 } from "@xs/render";
+import { CollabSession, type CollabSocket, type RemoteCursor } from "./collab-session.js";
 import { TrailStore } from "./trail-store.js";
 
 function nowSeconds(): number {
@@ -78,6 +81,10 @@ export class EditorStore {
   /** Last known canvas size, for zoom-to-fit and generator placement. */
   canvasWidth = 1024;
   canvasHeight = 768;
+  /** Active collaboration session (`null` when editing solo). */
+  collab: CollabSession | null = null;
+  /** Per-element version last broadcast, to send only what changed (and avoid echo). */
+  private lastBroadcast = new Map<string, number>();
 
   constructor(scene: Scene = new Scene(), viewport: Viewport = new Viewport()) {
     this.controller = new EditorController(scene);
@@ -87,6 +94,7 @@ export class EditorStore {
 
   private bump(): void {
     this.revision += 1;
+    this.broadcastLocalChanges();
   }
 
   get scene(): Scene {
@@ -478,6 +486,72 @@ export class EditorStore {
   cancelChart(): void {
     this.editingChart = null;
     this.bump();
+  }
+
+  // MARK: Collaboration
+
+  /**
+   * Join a collaboration room over `socket`. Local edits broadcast as
+   * `element-updates`; remote edits are reconciled into the scene by
+   * `version`/`versionNonce`. Returns the session.
+   */
+  startCollab(socket: CollabSocket, peer: Peer, room: string): CollabSession {
+    const session = new CollabSession(socket, peer, room, {
+      onScene: (elements) => this.applyRemoteScene(elements),
+      onRemoteElements: (elements) => this.applyRemoteElements(elements),
+      onPresence: () => this.bump(),
+    });
+    this.collab = session;
+    this.syncBroadcastBaseline();
+    return session;
+  }
+
+  /** Stop collaborating (leaves the room and closes the socket). */
+  stopCollab(): void {
+    this.collab?.leave();
+    this.collab = null;
+  }
+
+  /** Remote peers' live cursors/selection, for presence rendering. */
+  get remoteCursors(): RemoteCursor[] {
+    return this.collab === null ? [] : [...this.collab.cursors.values()];
+  }
+
+  /** Replace the whole scene from a room snapshot (no undo step). */
+  private applyRemoteScene(elements: ExcalidrawElement[]): void {
+    this.controller.store.modifyScene((scene) => scene.replaceAll(elements));
+    this.controller.store.rebase();
+    this.controller.selectedIDs = new Set();
+    this.syncBroadcastBaseline();
+    this.revision += 1;
+  }
+
+  /** Merge a versioned remote batch into the scene (reconciled, no undo step). */
+  private applyRemoteElements(elements: ExcalidrawElement[]): void {
+    const merged = reconcileElements(this.scene.elements, elements);
+    this.controller.store.modifyScene((scene) => scene.replaceAll(merged));
+    this.controller.store.rebase();
+    this.syncBroadcastBaseline();
+    this.revision += 1;
+  }
+
+  /** Mark every current element as already broadcast (call after applying remote). */
+  private syncBroadcastBaseline(): void {
+    this.lastBroadcast.clear();
+    for (const el of this.scene.elements) this.lastBroadcast.set(el.id, el.version);
+  }
+
+  /** Send elements whose version changed since the last broadcast. */
+  private broadcastLocalChanges(): void {
+    if (this.collab === null) return;
+    const changed: ExcalidrawElement[] = [];
+    for (const el of this.scene.elements) {
+      if (this.lastBroadcast.get(el.id) !== el.version) {
+        changed.push(el);
+        this.lastBroadcast.set(el.id, el.version);
+      }
+    }
+    this.collab.broadcastElements(changed);
   }
 
   setEditingText(value: string): void {

@@ -1,3 +1,4 @@
+import { canonicalJSON } from "@xs/model";
 import { MESSAGE_TYPES, type Message, type MessageType } from "./messages.js";
 
 const TYPES = new Set<string>(MESSAGE_TYPES);
@@ -24,6 +25,17 @@ export function isMessage(value: unknown): value is Message {
 /** Serialize a message to a JSON wire string (v1 transport is JSON). */
 export function encode(message: Message): string {
   return JSON.stringify(message);
+}
+
+/**
+ * Canonical wire encoding: compact JSON with recursively sorted keys, matching
+ * Swift's `JSONEncoder` (`.sortedKeys` + `.withoutEscapingSlashes`). Both clients
+ * produce byte-identical output for the same message, so it is the format used
+ * for the shared cross-language conformance fixtures. The live transport can use
+ * the faster {@link encode}; a decoder accepts either (JSON parse ignores order).
+ */
+export function canonicalEncode(message: Message): string {
+  return canonicalJSON(message, false);
 }
 
 /**
