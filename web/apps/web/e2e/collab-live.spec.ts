@@ -51,6 +51,10 @@ test("browser shares one room with the iOS app", async ({ page }) => {
   expect(summary.ipad).toBeGreaterThan(0);
   expect(summary.peers).toBeGreaterThan(0);
   await shot(page, "15-collab-live-browser");
+
+  // Stay connected briefly so the iPad still sees us in its roster while it
+  // checks presence and captures its screenshot (avoids a peer-left race).
+  await page.waitForTimeout(8000);
 });
 
 async function selectThenDraw(page: import("@playwright/test").Page): Promise<void> {

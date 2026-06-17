@@ -30,7 +30,12 @@ final class CollabLiveUITests: XCTestCase {
 
         // The browser peer drew one element; we receive it (room snapshot on
         // join, or a live element-update) → the shared count reaches 1.
-        waitForCount(app, atLeast: 1, timeout: 60)
+        waitForCount(app, "collab-element-count", atLeast: 1, timeout: 60)
+
+        // The browser peer must be in our roster too (presence both ways). Check
+        // this *before* we draw: the browser stays connected until it sees our
+        // element, so it is guaranteed present here.
+        waitForCount(app, "collab-peer-count", atLeast: 1, timeout: 30)
 
         // Draw our own rectangle → count 2, broadcast to the browser.
         app.buttons["tool-rectangle"].tap()
@@ -39,7 +44,7 @@ final class CollabLiveUITests: XCTestCase {
                 forDuration: 0.15,
                 thenDragTo: canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.58, dy: 0.62))
             )
-        waitForCount(app, atLeast: 2, timeout: 30)
+        waitForCount(app, "collab-element-count", atLeast: 2, timeout: 30)
 
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.lifetime = .keepAlways
@@ -50,14 +55,16 @@ final class CollabLiveUITests: XCTestCase {
         sleep(2)
     }
 
-    private func waitForCount(_ app: XCUIApplication, atLeast target: Int, timeout: TimeInterval) {
+    private func waitForCount(
+        _ app: XCUIApplication, _ identifier: String, atLeast target: Int, timeout: TimeInterval
+    ) {
         let deadline = Date().addingTimeInterval(timeout)
         var last = ""
         while Date() < deadline {
-            last = app.staticTexts["collab-element-count"].label
+            last = app.staticTexts[identifier].label
             if let value = Int(last), value >= target { return }
             usleep(250_000)
         }
-        XCTFail("shared element count did not reach \(target) (last seen: \(last))")
+        XCTFail("\(identifier) did not reach \(target) (last seen: \(last))")
     }
 }
