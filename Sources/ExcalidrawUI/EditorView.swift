@@ -66,6 +66,14 @@ public struct EditorView: View {
             Button("Cancel", role: .cancel) { model.showLinkPrompt = false }
             Button("OK") { model.commitLink() }
         }
+        .alert("Embed", isPresented: $model.showEmbedPrompt) {
+            TextField("https://youtube.com/watch?v=…", text: $model.embedURLText)
+                .accessibilityIdentifier("embed-field")
+            Button("Cancel", role: .cancel) { model.showEmbedPrompt = false }
+            Button("Insert") { model.commitEmbed() }.accessibilityIdentifier("embed-insert")
+        } message: {
+            Text("Embed a YouTube, Vimeo, Figma, CodeSandbox… page.")
+        }
         .environment(\.layoutDirection, model.layoutDirection)
     }
 
@@ -258,6 +266,7 @@ public struct EditorView: View {
         .accessibilityIdentifier("excalidraw-canvas")
         .overlay(trailOverlay)
         .overlay(inputLayer)
+        .overlay(embedOverlay)
         .overlay(textEditor)
         .contextMenu { contextMenuItems }
         .focusable()
@@ -480,6 +489,8 @@ public struct EditorView: View {
             }.accessibilityIdentifier("snap-toggle")
             Button { model.showMermaidInput = true } label: { Image(systemName: "flowchart") }
                 .accessibilityIdentifier("mermaid")
+            Button { model.showEmbedPrompt = true } label: { Image(systemName: "play.rectangle") }
+                .accessibilityIdentifier("embed")
             Button { model.showChartInput = true } label: { Image(systemName: "chart.bar") }
                 .accessibilityIdentifier("chart")
             Button { model.showLibrary = true } label: { Image(systemName: "books.vertical") }

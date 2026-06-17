@@ -298,6 +298,8 @@ public final class EditorModel: ObservableObject {
 
     @Published public var showLinkPrompt = false
     @Published public var linkText = ""
+    @Published public var showEmbedPrompt = false
+    @Published public var embedURLText = ""
 
     public func promptLink() {
         linkText = controller.selectionLink ?? ""

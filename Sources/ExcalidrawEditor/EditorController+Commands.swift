@@ -160,6 +160,21 @@ public extension EditorController {
         return element.id
     }
 
+    /// Insert an embeddable element carrying `link`, centred at `point`, and
+    /// select it. The link drives the live web embed (or placeholder).
+    @discardableResult
+    func insertEmbeddable(link: String, at point: Point, width: Double = 460, height: Double = 300) -> String {
+        var base = currentItem.makeBase(id: nextID(), seed: nextSeed(), x: point.x - width / 2, y: point.y - height / 2)
+        base.width = width
+        base.height = height
+        base.backgroundColor = "transparent"
+        base.link = link
+        let element = ExcalidrawElement(base: base, kind: .embeddable)
+        store.modifyScene { $0.add(element) }
+        selectedIDs = [element.id]
+        return element.id
+    }
+
     /// Stamp a library item (a group of elements) onto the canvas with its
     /// top-left at `point`, re-id'd, and select it.
     @discardableResult

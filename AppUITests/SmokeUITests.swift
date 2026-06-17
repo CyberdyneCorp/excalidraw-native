@@ -161,6 +161,23 @@ final class SmokeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    func testEmbedInsert() {
+        // Insert a YouTube embed via the prompt; a live WKWebView appears over
+        // the embeddable element.
+        app.buttons["embed"].tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        let field = alert.textFields.firstMatch
+        field.tap()
+        field.typeText("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        alert.buttons["embed-insert"].firstMatch.tap()
+        // Give the web view a moment to start loading, then capture.
+        sleep(3)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "embed"; shot.lifetime = .keepAlways; add(shot)
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     func testMetalRendererDrawMoveAndZoom() throws {
         let toggle = app.buttons["renderer-toggle"]
         guard toggle.waitForExistence(timeout: 5) else {

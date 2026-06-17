@@ -1,9 +1,50 @@
+import ExcalidrawMath
 import ExcalidrawModel
+import ExcalidrawRender
 import SwiftUI
 
-/// Properties-bar controls (custom color picker, arrowhead pickers) and the
-/// laser/eraser trail overlay. Split out of `EditorView` to keep it small.
+/// Properties-bar controls (custom color picker, arrowhead pickers), the
+/// laser/eraser trail overlay, and the live web-embed overlay. Split out of
+/// `EditorView` to keep it small.
 extension EditorView {
+    /// Live `WKWebView` embeds positioned over allow-listed embeddable elements.
+    /// Interactive (plays media) except under the selection tool, where touches
+    /// pass through so the element can be selected/moved on the canvas.
+    @ViewBuilder
+    var embedOverlay: some View {
+        #if canImport(UIKit)
+            let interactive = model.activeTool != .selection
+            ForEach(embeddableElements, id: \.id) { element in
+                if let link = element.base.link, let url = EmbedAllowList.embedURL(for: link) {
+                    let rect = embedRect(element)
+                    WebEmbedView(url: url, interactive: interactive)
+                        .frame(width: rect.width, height: rect.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(interactive)
+                }
+            }
+        #endif
+    }
+
+    private var embeddableElements: [ExcalidrawElement] {
+        model.controller.scene.visibleElements.filter {
+            switch $0.kind {
+            case .embeddable, .iframe: true
+            default: false
+            }
+        }
+    }
+
+    private func embedRect(_ element: ExcalidrawElement) -> CGRect {
+        let topLeft = model.viewport.sceneToView(Point(element.base.x, element.base.y))
+        let zoom = model.viewport.zoom
+        return CGRect(
+            x: topLeft.x, y: topLeft.y,
+            width: element.base.width * zoom, height: element.base.height * zoom
+        )
+    }
+
     /// Native color picker for arbitrary stroke/background colors. The iOS system
     /// picker includes a screen **eyedropper**, so this also covers that gap.
     func customColorPicker(
