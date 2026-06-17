@@ -38,6 +38,8 @@ Arrowhead-type picker · custom color picker + eyedropper · laser pointer + ani
 - **[docs/INVESTIGATION.md](docs/INVESTIGATION.md)** — analysis of the upstream source: data model, file format, rendering pipeline, interaction model, geometry/math, and full feature inventory.
 - **[docs/PLAN.md](docs/PLAN.md)** — architecture, Swift package structure, key design decisions, testing strategy, risks.
 - **[docs/ROADMAP.md](docs/ROADMAP.md)** — phased delivery plan (Phase 0 foundations → Phase 8 collaboration), with per-phase status and a consolidated **[Known gaps & deferred items](docs/ROADMAP.md#known-gaps--deferred-items)** list.
+- **[docs/TYPESCRIPT_SVELTE_PORT.md](docs/TYPESCRIPT_SVELTE_PORT.md)** — roadmap for a TypeScript + Svelte 5 twin of the library, so that in Phase 8 iOS and web-browser clients collaborate over a custom WebSocket protocol.
+- **[openspec/](openspec/)** — language-neutral OpenSpec baseline specs (14 capabilities) that both the Swift app and the TypeScript twin are built against.
 
 ## Building
 
