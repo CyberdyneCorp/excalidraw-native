@@ -15,7 +15,7 @@ web/
 │   ├── model/     @xs/model — element schema, scene, .excalidraw codecs ✅ T1
 │   ├── geometry/  @xs/geometry — bounds, hit-test, snapping, frames     🟡 T2
 │   ├── render/    @xs/render — Canvas2D renderer, rough.js, SVG/PNG     🟡 T3
-│   ├── editor/    @xs/editor — tools, selection, generators, smart        (T4)
+│   ├── editor/    @xs/editor — tools, selection/transform, actions      🟡 T4
 │   ├── svelte/    @xs/svelte — Svelte 5 runes store + components          (T5)
 │   └── protocol/  @xs/protocol — collaboration wire schema               (T7)
 ├── apps/web/      browser app                                             (T5)
@@ -58,3 +58,12 @@ pnpm lint          # biome
   (`tEXt` chunk + CRC-32). 27 tests, incl. the renderer verified against a
   recording mock 2D context. Still to port: the interactive overlay and the
   PNG rasterizer (needs a real/headless canvas).
+- **T4 — Editor engine (in progress):** `@xs/editor` ported from
+  `ExcalidrawEditor` — the pure pointer state machine: tool model, element
+  creation (shapes/line/arrow/freedraw/frame), single/group/box/multi
+  selection, move/resize/rotate (with aspect + from-centre), eraser, undo/redo,
+  and the selection actions (group/ungroup, duplicate, lock, z-order,
+  align, flip) + object/gap snapping + frame membership. 40 tests ported from
+  the Swift editor suite. Still to port: arrow binding, elbow arrows, linear
+  point edit, image crop, generators (mermaid/tables/charts/sticky-notes),
+  shape recognition, flowchart spawning, hyperlinks, copy-paste.

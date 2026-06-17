@@ -1,0 +1,23 @@
+{
+  "name": "@xs/editor",
+  "version": "0.0.0",
+  "description": "The pure editor state machine — tools, selection, transform, undo — ported from ExcalidrawEditor.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@xs/geometry": "workspace:*",
+    "@xs/math": "workspace:*",
+    "@xs/model": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
