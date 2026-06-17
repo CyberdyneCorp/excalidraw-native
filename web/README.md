@@ -146,3 +146,12 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     real bug: in Svelte 5 runes mode the app's UI/canvas didn't repaint on
     store changes (plain reads aren't tracked) — fixed with a `rev`-keyed
     `$derived` view. Runs in CI (`web` workflow `e2e` job).
+  - **T6 slice 2:** **golden snapshots** (`@xs/render` `golden.test.ts`) — a
+    representative corpus (the shared `../Fixtures/minimal_scene.excalidraw`
+    plus a synthetic `rich_scene` covering every renderable element kind at
+    fixed seeds) locked against committed goldens: the **canonical-JSON**
+    golden is language-neutral (the Swift twin's sorted-key `JSONEncoder`
+    emits the same bytes, so it doubles as the cross-language serialization
+    contract) and the **SVG** golden pins the full TS render pipeline
+    (rough.js + perfect-freehand + serialization). A determinism check proves
+    repeated renders are byte-identical. Regenerate with `UPDATE_GOLDEN=1`.
