@@ -155,3 +155,12 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     contract) and the **SVG** golden pins the full TS render pipeline
     (rough.js + perfect-freehand + serialization). A determinism check proves
     repeated renders are byte-identical. Regenerate with `UPDATE_GOLDEN=1`.
+  - **T6 slice 3:** two rendering/UX bugs the E2E pass surfaced, now fixed with
+    regression tests: (1) **arrows drew no arrowhead** — the canvas renderer
+    never ported `SceneRenderer.drawArrowheads`, so arrows were bare lines;
+    (2) **sticky notes couldn't hold text** — inserting a note never opened its
+    bound-text editor, there was no double-click-to-edit, and the renderer
+    didn't centre container-bound text. Covered by `scene-renderer.test.ts`
+    (arrowhead stroke/fill + bound-text centring) and `editor-store.test.ts`
+    (insert-note-edits-text + double-click re-edit), plus the Playwright suite
+    now asserts the arrow's `endArrowhead` and types a sticky-note label.

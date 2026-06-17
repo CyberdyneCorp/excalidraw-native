@@ -1,7 +1,7 @@
-import { Scene } from "@xs/model";
+import { type ExcalidrawElement, Scene, defaultBase, defaultTextProps } from "@xs/model";
 import { describe, expect, it } from "vitest";
 import { type RenderContext, renderScene } from "./scene-renderer.js";
-import { rect, text } from "./test-helpers.js";
+import { arrow, rect, text } from "./test-helpers.js";
 import { Viewport } from "./viewport.js";
 
 /** A recording 2D context that counts the draw calls the renderer issues. */
@@ -18,10 +18,23 @@ class RecordingContext implements RenderContext {
   lineJoin: CanvasLineJoin = "miter";
   globalAlpha = 1;
   font = "";
+  // Track the accumulated transform so tests can assert *where* text lands.
+  private tx = 0;
+  private ty = 0;
+  private stack: [number, number][] = [];
+  lastTextOrigin: [number, number] | null = null;
 
-  save() {}
-  restore() {}
-  translate() {}
+  save() {
+    this.stack.push([this.tx, this.ty]);
+  }
+  restore() {
+    const top = this.stack.pop();
+    if (top !== undefined) [this.tx, this.ty] = top;
+  }
+  translate(x: number, y: number) {
+    this.tx += x;
+    this.ty += y;
+  }
   scale() {}
   rotate() {}
   beginPath() {}
@@ -47,8 +60,9 @@ class RecordingContext implements RenderContext {
   strokeRect() {}
   arc() {}
   setLineDash() {}
-  fillText() {
+  fillText(_text: string, x: number, y: number) {
     this.fillTextCount++;
+    this.lastTextOrigin = [this.tx + x, this.ty + y];
   }
 }
 
@@ -83,6 +97,75 @@ describe("scene renderer", () => {
     const ctx = new RecordingContext();
     renderScene(ctx, new Scene([text("Hello", { x: 10, y: 10, w: 80, h: 25 })]), opts());
     expect(ctx.fillTextCount).toBe(1);
+  });
+
+  it("draws an open arrowhead on top of the arrow's line (regression)", () => {
+    const plain = new RecordingContext();
+    renderScene(
+      plain,
+      new Scene([
+        arrow(
+          [
+            [0, 0],
+            [100, 0],
+          ],
+          { x: 50, y: 50 },
+        ),
+      ]),
+      opts(),
+    );
+
+    const headed = new RecordingContext();
+    const withHead = {
+      ...arrow(
+        [
+          [0, 0],
+          [100, 0],
+        ],
+        { x: 50, y: 50 },
+      ),
+      endArrowhead: "arrow",
+    } as ExcalidrawElement;
+    renderScene(headed, new Scene([withHead]), opts());
+
+    // The "V" head adds an extra stroked path (move + 2 lines) over the bare line.
+    expect(headed.strokeCount).toBeGreaterThan(plain.strokeCount);
+    expect(headed.pathOps).toBeGreaterThan(plain.pathOps);
+  });
+
+  it("fills a triangle arrowhead (regression)", () => {
+    const ctx = new RecordingContext();
+    const tri = {
+      ...arrow(
+        [
+          [0, 0],
+          [100, 0],
+        ],
+        { x: 50, y: 50 },
+      ),
+      endArrowhead: "triangle",
+    } as ExcalidrawElement;
+    renderScene(ctx, new Scene([tri]), opts());
+    expect(ctx.fillCount).toBeGreaterThan(0);
+  });
+
+  it("centres container-bound text inside its container (regression)", () => {
+    const container: ExcalidrawElement = {
+      ...defaultBase("cont", { x: 20, y: 20, width: 160, height: 160 }),
+      type: "rectangle",
+    };
+    const label: ExcalidrawElement = {
+      ...defaultBase("txt", { x: 20, y: 100, width: 40, height: 20 }),
+      type: "text",
+      ...defaultTextProps({ text: "Hi", originalText: "Hi", containerId: "cont" }),
+    };
+    const ctx = new RecordingContext();
+    renderScene(ctx, new Scene([container, label]), opts());
+
+    // x origin == container.midX - textWidth/2 == 100 - 20 == 80, independent of
+    // the text element's own x (20), proving it was re-centred in the container.
+    expect(ctx.lastTextOrigin).not.toBeNull();
+    expect(ctx.lastTextOrigin![0]).toBeCloseTo(80, 5);
   });
 
   it("culls far off-screen elements", () => {

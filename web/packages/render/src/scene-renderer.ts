@@ -1,5 +1,5 @@
 import { BoundingBox, cullVisible } from "@xs/geometry";
-import type { ExcalidrawElement, Scene, TextElement } from "@xs/model";
+import type { Arrowhead, ExcalidrawElement, LocalPoint, Scene, TextElement } from "@xs/model";
 import { viewBackgroundColor } from "@xs/model";
 import { getStroke } from "perfect-freehand";
 import { type PathSink, opsToPath } from "./drawable-path.js";
@@ -75,6 +75,70 @@ function drawDrawable(ctx: RenderContext, el: ExcalidrawElement): void {
       ctx.setLineDash(drawable.options.strokeLineDash ?? []);
       ctx.stroke();
     }
+  }
+}
+
+/**
+ * Draw an arrowhead at `tip`, oriented along the segment from `prev` to `tip`.
+ * Triangle/diamond heads are filled; everything else is an open "V" stroke.
+ * (parity: SceneRenderer.drawArrowhead)
+ */
+function drawArrowhead(
+  ctx: RenderContext,
+  tip: LocalPoint,
+  prev: LocalPoint,
+  head: Arrowhead,
+  color: string,
+  strokeWidth: number,
+): void {
+  const dx = tip[0] - prev[0];
+  const dy = tip[1] - prev[1];
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return;
+  const ux = dx / len; // unit vector pointing toward the tip
+  const uy = dy / len;
+  const size = Math.min(20, len * 0.5) + strokeWidth;
+  const angle = (25 * Math.PI) / 180;
+  // Two barbs: rotate the reverse direction by ±angle.
+  const bx = -ux;
+  const by = -uy;
+  const p1x = tip[0] + (bx * Math.cos(angle) - by * Math.sin(angle)) * size;
+  const p1y = tip[1] + (bx * Math.sin(angle) + by * Math.cos(angle)) * size;
+  const p2x = tip[0] + (bx * Math.cos(-angle) - by * Math.sin(-angle)) * size;
+  const p2y = tip[1] + (bx * Math.sin(-angle) + by * Math.cos(-angle)) * size;
+
+  const filled = head === "triangle" || head === "diamond";
+  ctx.beginPath();
+  ctx.moveTo(p1x, p1y);
+  ctx.lineTo(tip[0], tip[1]);
+  ctx.lineTo(p2x, p2y);
+  if (filled) {
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = "round";
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
+}
+
+/** Draw the start/end arrowheads of an arrow element. (parity: SceneRenderer.drawArrowheads) */
+function drawArrowheads(
+  ctx: RenderContext,
+  el: Extract<ExcalidrawElement, { type: "arrow" }>,
+): void {
+  const pts = el.points;
+  if (pts.length < 2) return;
+  if (el.endArrowhead !== null) {
+    const tip = pts[pts.length - 1]!;
+    const prev = pts[pts.length - 2]!;
+    drawArrowhead(ctx, tip, prev, el.endArrowhead, el.strokeColor, el.strokeWidth);
+  }
+  if (el.startArrowhead !== null) {
+    drawArrowhead(ctx, pts[0]!, pts[1]!, el.startArrowhead, el.strokeColor, el.strokeWidth);
   }
 }
 
@@ -158,9 +222,17 @@ export function renderScene(ctx: RenderContext, scene: Scene, opts: RenderOption
       ctx.translate(-el.width / 2, -el.height / 2);
     }
     switch (el.type) {
-      case "text":
+      case "text": {
+        // Centre text bound to a container (e.g. a sticky note) within it.
+        const container = el.containerId !== null ? scene.element(el.containerId) : undefined;
+        if (container !== undefined) {
+          const ox = container.x + container.width / 2 - el.width / 2;
+          const oy = container.y + container.height / 2 - el.height / 2;
+          ctx.translate(ox - el.x, oy - el.y);
+        }
         drawText(ctx, el);
         break;
+      }
       case "freedraw":
         drawFreedraw(ctx, el);
         break;
@@ -170,6 +242,10 @@ export function renderScene(ctx: RenderContext, scene: Scene, opts: RenderOption
         break;
       case "image":
         break; // image bitmaps are drawn by the host
+      case "arrow":
+        drawDrawable(ctx, el);
+        drawArrowheads(ctx, el);
+        break;
       default:
         drawDrawable(ctx, el);
         break;

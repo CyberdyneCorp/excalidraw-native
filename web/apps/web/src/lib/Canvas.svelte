@@ -87,6 +87,11 @@
     store.pointer("up", toScene(e), opts(e));
   }
 
+  function onDblClick(e: MouseEvent): void {
+    const r = canvas.getBoundingClientRect();
+    store.editBoundTextAt(new Point(e.clientX - r.left, e.clientY - r.top));
+  }
+
   function onWheel(e: WheelEvent): void {
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
@@ -106,6 +111,7 @@
     onpointermove={onPointerMove}
     onpointerup={onPointerUp}
     onpointercancel={onPointerUp}
+    ondblclick={onDblClick}
     onwheel={onWheel}
   ></canvas>
 </div>

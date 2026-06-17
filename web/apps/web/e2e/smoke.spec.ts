@@ -31,6 +31,12 @@ test("draws shapes with the drawing tools", async ({ page }) => {
   await selectTool(page, "arrow");
   await drag(page, { x: 0.45, y: 0.4 }, { x: 0.55, y: 0.4 });
   expect(await elementCount(page)).toBe(4);
+  // The arrow must carry an end arrowhead so the renderer draws the head.
+  expect(
+    await read(page, (s) =>
+      s.scene.visibleElements.some((e) => e.type === "arrow" && e.endArrowhead === "arrow"),
+    ),
+  ).toBe(true);
 
   await shot(page, "01-shapes");
 });
@@ -65,6 +71,16 @@ test("inserts the generators (table, sticky note, chart, mermaid)", async ({ pag
   expect(await read(page, (s) => s.scene.visibleElements.some((e) => e.backgroundColor === "#ffec99"))).toBe(
     true,
   );
+  // Inserting a sticky note opens its text editor; typing must land on the bound text.
+  const noteEditor = page.getByTestId("text-editor");
+  await expect(noteEditor).toBeVisible();
+  await noteEditor.fill("Idea!");
+  await noteEditor.press("Enter");
+  expect(
+    await read(page, (s) =>
+      s.scene.visibleElements.some((e) => e.type === "text" && e.containerId !== null && e.text === "Idea!"),
+    ),
+  ).toBe(true);
 
   await page.getByTestId("gen-chart").click();
   await page.getByTestId("gen-mermaid").click();

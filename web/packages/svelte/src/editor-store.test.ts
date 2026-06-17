@@ -176,4 +176,38 @@ describe("EditorStore", () => {
     store.insertStickyNote();
     expect(store.scene.visibleElements.some((e) => e.backgroundColor === "#ffec99")).toBe(true);
   });
+
+  it("inserting a sticky note begins editing its bound text (regression)", () => {
+    const store = new EditorStore();
+    store.insertStickyNote();
+    expect(store.editingText).not.toBeNull();
+    const note = store.scene.visibleElements.find((e) => e.type === "rectangle");
+    const boundTextId = note?.boundElements?.find((b) => b.type === "text")?.id;
+    expect(boundTextId).toBeDefined();
+    expect(store.editingText?.id).toBe(boundTextId);
+
+    // Typing into the editor and committing stores the text on the bound element.
+    store.setEditingText("hello");
+    store.commitText();
+    expect(store.editingText).toBeNull();
+    const label = store.scene.element(boundTextId!);
+    expect(label?.type === "text" && label.text).toBe("hello");
+  });
+
+  it("double-clicking a sticky note re-opens its text editor (regression)", () => {
+    const store = new EditorStore();
+    store.insertStickyNote();
+    const note = store.scene.visibleElements.find((e) => e.type === "rectangle")!;
+    store.setEditingText("note");
+    store.commitText();
+    expect(store.editingText).toBeNull();
+
+    // Double-click on the note's centre (default viewport: scene == view).
+    const center = new Point(note.x + note.width / 2, note.y + note.height / 2);
+    expect(store.editBoundTextAt(center)).toBe(true);
+    expect(store.editingText?.value).toBe("note");
+
+    // Double-click on empty space does nothing.
+    expect(store.editBoundTextAt(new Point(5000, 5000))).toBe(false);
+  });
 });

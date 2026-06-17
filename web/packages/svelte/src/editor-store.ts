@@ -294,7 +294,8 @@ export class EditorStore {
     return this.viewport.viewToScene(new Point(this.canvasWidth / 2, this.canvasHeight / 2));
   }
   insertStickyNote(): void {
-    this.controller.createStickyNote(this.viewportCenterScene());
+    const { container, text } = this.controller.createStickyNote(this.viewportCenterScene());
+    this.beginBoundTextEdit(container, text);
     this.bump();
   }
   insertTable(rows = 3, cols = 3): void {
@@ -327,6 +328,31 @@ export class EditorStore {
     const id = this.controller.createText(this.viewport.viewToScene(viewPoint));
     this.editingText = { id, value: "", viewX: viewPoint.x, viewY: viewPoint.y };
     this.bump();
+  }
+
+  /**
+   * Begin editing the text bound to a container (e.g. a sticky note), placing
+   * the on-canvas editor over the container. Used after inserting a sticky note
+   * and when double-clicking an existing one.
+   */
+  private beginBoundTextEdit(containerId: string, textId: string): void {
+    const container = this.scene.element(containerId);
+    const text = this.scene.element(textId);
+    if (container === undefined || text === undefined || text.type !== "text") return;
+    const view = this.viewport.sceneToView(new Point(container.x, container.y));
+    this.editingText = { id: textId, value: text.text, viewX: view.x, viewY: view.y };
+  }
+
+  /**
+   * If a container with bound text is hit at `viewPoint` (a double-click),
+   * begin editing its label. Returns whether editing started.
+   */
+  editBoundTextAt(viewPoint: Point): boolean {
+    const hit = this.controller.boundTextHit(this.viewport.viewToScene(viewPoint));
+    if (hit === null) return false;
+    this.beginBoundTextEdit(hit.container, hit.text);
+    this.bump();
+    return true;
   }
 
   setEditingText(value: string): void {
