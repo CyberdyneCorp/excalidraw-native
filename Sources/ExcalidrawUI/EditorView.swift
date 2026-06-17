@@ -19,6 +19,7 @@ public struct EditorView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.displayScale) private var displayScale
     @State private var exported = false
+    @State private var hoverPoint: CGPoint?
     @State private var photoItem: PhotosPickerItem?
     @State private var importingLibrary = false
     @State private var exportingLibrary = false
@@ -266,6 +267,7 @@ public struct EditorView: View {
         .accessibilityIdentifier("excalidraw-canvas")
         .overlay(trailOverlay)
         .overlay(inputLayer)
+        .overlay(hoverIndicator)
         .overlay(embedOverlay)
         .overlay(textEditor)
         .contextMenu { contextMenuItems }
@@ -280,7 +282,12 @@ public struct EditorView: View {
     @ViewBuilder
     private var inputLayer: some View {
         #if canImport(UIKit)
-            PointerInputView(model: model)
+            PointerInputView(
+                model: model,
+                onHover: { hoverPoint = $0 },
+                // Pencil Pro squeeze toggles the eraser.
+                onSqueeze: { model.select(tool: model.activeTool == .eraser ? .selection : .eraser) }
+            )
         #else
             Color.clear.contentShape(Rectangle())
                 .gesture(
@@ -292,6 +299,18 @@ public struct EditorView: View {
                         .onEnded { v in model.pointer(.up, at: v.location) }
                 )
         #endif
+    }
+
+    /// A small ring shown where an Apple Pencil is hovering (17.5+ hover).
+    @ViewBuilder
+    private var hoverIndicator: some View {
+        if let point = hoverPoint {
+            Circle()
+                .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1.5)
+                .frame(width: 14, height: 14)
+                .position(point)
+                .allowsHitTesting(false)
+        }
     }
 
     @ViewBuilder
