@@ -144,6 +144,23 @@ final class SmokeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    func testMermaidDiagramInsert() {
+        // Open the diagram sheet, enter a flowchart, insert it, and capture it.
+        app.buttons["mermaid"].tap()
+        let field = app.textViews["mermaid-text"].exists ? app.textViews["mermaid-text"] : app
+            .textFields["mermaid-text"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("flowchart TD\nA[Start] --> B{OK?}\nB --> C[Done]")
+        app.buttons["mermaid-insert"].tap()
+        // Sheet dismisses and the diagram is on the canvas.
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        sleep(1)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "mermaid-diagram"; shot.lifetime = .keepAlways; add(shot)
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     func testMetalRendererDrawMoveAndZoom() throws {
         let toggle = app.buttons["renderer-toggle"]
         guard toggle.waitForExistence(timeout: 5) else {

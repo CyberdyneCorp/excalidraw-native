@@ -57,6 +57,7 @@ public struct EditorView: View {
         .sheet(isPresented: $model.showCommandPalette) { commandPalette }
         .sheet(isPresented: $model.showLibrary) { librarySheet }
         .sheet(isPresented: $model.showChartInput) { chartInputSheet }
+        .sheet(isPresented: $model.showMermaidInput) { mermaidInputSheet }
         .sheet(isPresented: $model.showBenchmark) { RendererBenchmarkView() }
         .alert("Link", isPresented: $model.showLinkPrompt) {
             TextField("https://example.com", text: $model.linkText)
@@ -136,6 +137,29 @@ public struct EditorView: View {
             .toolbar {
                 Button("Cancel") { model.showChartInput = false }
                 Button("Insert") { model.commitChart() }.accessibilityIdentifier("chart-insert")
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var mermaidInputSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Mermaid flowchart") {
+                    TextField(
+                        "flowchart TD\n  A[Start] --> B{OK?}\n  B -->|Yes| C[Go]",
+                        text: $model.mermaidText,
+                        axis: .vertical
+                    )
+                    .lineLimit(4 ... 12)
+                    .font(.system(.body, design: .monospaced))
+                    .accessibilityIdentifier("mermaid-text")
+                }
+            }
+            .navigationTitle("Insert Diagram")
+            .toolbar {
+                Button("Cancel") { model.showMermaidInput = false }
+                Button("Insert") { model.commitMermaid() }.accessibilityIdentifier("mermaid-insert")
             }
         }
         .presentationDetents([.medium])
@@ -454,6 +478,8 @@ public struct EditorView: View {
             Button { model.toggleSnap() } label: {
                 Image(systemName: model.snapEnabled ? "ruler.fill" : "ruler")
             }.accessibilityIdentifier("snap-toggle")
+            Button { model.showMermaidInput = true } label: { Image(systemName: "flowchart") }
+                .accessibilityIdentifier("mermaid")
             Button { model.showChartInput = true } label: { Image(systemName: "chart.bar") }
                 .accessibilityIdentifier("chart")
             Button { model.showLibrary = true } label: { Image(systemName: "books.vertical") }
@@ -562,6 +588,9 @@ public struct EditorView: View {
         guard let item else { return }
         Task {
             if let data = try? await item.loadTransferable(type: Data.self) {
+                // An exported PNG with an embedded scene re-opens as a drawing;
+                // otherwise it's inserted as an image.
+                if model.openSceneFromPNG(data) { return }
                 model.insertImage(data: data, mimeType: "image/png", viewSize: model.canvasSize)
             }
         }
