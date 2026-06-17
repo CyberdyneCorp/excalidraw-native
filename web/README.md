@@ -67,3 +67,8 @@ pnpm lint          # biome
   the Swift editor suite. Still to port: arrow binding, elbow arrows, linear
   point edit, image crop, generators (mermaid/tables/charts/sticky-notes),
   shape recognition, flowchart spawning, hyperlinks, copy-paste.
+  - **T4 slice 2:** generators (sticky notes, tables, charts), text
+    create/edit, element links, copy/paste, image/embeddable/library insert.
+    23 more tests (ported from StickyNote/Table/Chart/ElementLink/CopyPaste).
+    Still to port: arrow binding, elbow arrows, linear point edit, image crop,
+    Mermaid parser, shape recognition, flowchart spawning.

@@ -11,7 +11,21 @@ import {
   snap as objectSnap,
 } from "@xs/geometry";
 import { Point } from "@xs/math";
-import { type ExcalidrawElement, type LocalPoint, RoundnessType, Scene, Store } from "@xs/model";
+import {
+  type BinaryFileData,
+  type ExcalidrawElement,
+  type ImageCrop,
+  type JSONValue,
+  type LocalPoint,
+  RoundnessType,
+  Scene,
+  Store,
+  type TextElement,
+  decodeFile,
+  defaultTextProps,
+  encodeFile,
+  makeFile,
+} from "@xs/model";
 import { type CurrentItem, defaultCurrentItem, makeBase } from "./current-item.js";
 import type { PointerEvent, PointerType } from "./pointer-event.js";
 import { type Tool, toolElementType } from "./tool.js";
@@ -638,6 +652,480 @@ export class EditorController {
 
   private get rotationOffset(): number {
     return 30 / this.zoom;
+  }
+
+  // MARK: Commands — links, clipboard, text, image
+
+  static readonly stickyNoteColor = "#ffec99";
+
+  /** Set (or clear, with null/empty) a hyperlink on the selected elements. */
+  setLink(url: string | null): void {
+    const trimmed = url?.trim();
+    this.updateSelected((el) => {
+      el.link = trimmed === undefined || trimmed.length === 0 ? null : trimmed;
+    });
+  }
+
+  /** The link of the single selected element, if any. */
+  get selectionLink(): string | null {
+    const sel = this.selectedElements;
+    return sel.length === 1 ? (sel[0]!.link ?? null) : null;
+  }
+
+  /** Set (or clear) the crop rectangle on an image element, as one undo step. */
+  setCrop(id: string, crop: ImageCrop | null): void {
+    const el = this.scene.element(id);
+    if (el === undefined || el.type !== "image") return;
+    this.store.transaction((scene) => scene.replace({ ...el, crop }));
+  }
+
+  /** Serialize the selection as an `.excalidraw` payload string. */
+  copyData(): string | null {
+    const elements = this.selectedElements;
+    if (elements.length === 0) return null;
+    return encodeFile(makeFile({ elements, files: this.filesFor(elements) }));
+  }
+
+  /** Paste elements from an `.excalidraw` payload, offset and re-id'd, and select them. */
+  paste(json: string, offset = 10): void {
+    let elements: ExcalidrawElement[];
+    let files: Record<string, BinaryFileData>;
+    try {
+      const file = decodeFile(json);
+      elements = file.elements;
+      files = file.files;
+    } catch {
+      return;
+    }
+    if (elements.length === 0) return;
+    const newIDs: string[] = [];
+    this.store.transaction((scene) => {
+      for (const el of elements) {
+        const copy = structuredClone(el);
+        copy.id = this.nextID();
+        copy.x += offset;
+        copy.y += offset;
+        scene.add(copy);
+        newIDs.push(copy.id);
+      }
+      for (const [id, f] of Object.entries(files)) scene.files[id] = f;
+    });
+    this.selectedIDs = new Set(newIDs);
+  }
+
+  private filesFor(elements: ExcalidrawElement[]): Record<string, BinaryFileData> {
+    const result: Record<string, BinaryFileData> = {};
+    for (const el of elements) {
+      if (el.type === "image" && el.fileId !== null) {
+        const file = this.scene.files[el.fileId];
+        if (file !== undefined) result[el.fileId] = file;
+      }
+    }
+    return result;
+  }
+
+  /** Create an empty text element at `point` and select it; returns its id. */
+  createText(point: Point, fontSize?: number): string {
+    const base = makeBase(this.currentItem, this.nextID(), this.nextSeed(), point.x, point.y);
+    const el: ExcalidrawElement = {
+      ...base,
+      type: "text",
+      ...defaultTextProps({
+        fontSize: fontSize ?? this.currentItem.fontSize,
+        fontFamily: this.currentItem.fontFamily,
+      }),
+    };
+    this.store.modifyScene((scene) => scene.add(el));
+    this.selectedIDs = new Set([el.id]);
+    return el.id;
+  }
+
+  /** Set a text element's content (one undo step), or remove it if empty and unbound. */
+  setText(id: string, text: string): void {
+    const el = this.scene.element(id);
+    if (el === undefined || el.type !== "text") return;
+    if (text.length === 0 && el.containerId === null) {
+      this.store.modifyScene((scene) =>
+        scene.replaceAll(scene.elements.filter((e) => e.id !== id)),
+      );
+      this.store.commit();
+      this.selectedIDs.delete(id);
+      return;
+    }
+    this.store.transaction((scene) => {
+      const lines = text.split("\n");
+      scene.replace({
+        ...el,
+        text,
+        originalText: text,
+        width: Math.max(0, ...lines.map((l) => l.length)) * el.fontSize * 0.6,
+        height: lines.length * el.fontSize * el.lineHeight,
+      });
+    });
+  }
+
+  /** Apply a change to each selected text element, recomputing its size, as one undo step. */
+  updateSelectedText(change: (draft: TextElement) => void): void {
+    const ids = this.selectedElements.filter((e) => e.type === "text").map((e) => e.id);
+    if (ids.length === 0) return;
+    this.store.transaction((scene) => {
+      for (const id of ids) {
+        const el = scene.element(id);
+        if (el === undefined || el.type !== "text") continue;
+        const draft = structuredClone(el);
+        change(draft);
+        const lines = draft.text.split("\n");
+        draft.width = Math.max(0, ...lines.map((l) => l.length)) * draft.fontSize * 0.6;
+        draft.height = Math.max(1, lines.length) * draft.fontSize * draft.lineHeight;
+        scene.replace(draft);
+      }
+    });
+  }
+
+  /** Insert an image element backed by a stored file, and select it. */
+  insertImage(
+    dataURL: string,
+    mimeType: string,
+    point: Point,
+    width: number,
+    height: number,
+    created = 0,
+  ): string {
+    const fileId = this.nextID();
+    const base = makeBase(this.currentItem, this.nextID(), this.nextSeed(), point.x, point.y);
+    const el: ExcalidrawElement = {
+      ...base,
+      width,
+      height,
+      backgroundColor: "transparent",
+      type: "image",
+      fileId,
+      status: "saved",
+      scale: [1, 1],
+      crop: null,
+    };
+    this.store.transaction((scene) => {
+      scene.files[fileId] = { mimeType, id: fileId, dataURL, created };
+      scene.add(el);
+    });
+    this.selectedIDs = new Set([el.id]);
+    return el.id;
+  }
+
+  /** Insert an embeddable element carrying `link`, centred at `point`, and select it. */
+  insertEmbeddable(link: string, point: Point, width = 460, height = 300): string {
+    const base = makeBase(
+      this.currentItem,
+      this.nextID(),
+      this.nextSeed(),
+      point.x - width / 2,
+      point.y - height / 2,
+    );
+    const el: ExcalidrawElement = {
+      ...base,
+      width,
+      height,
+      backgroundColor: "transparent",
+      link,
+      type: "embeddable",
+    };
+    this.store.modifyScene((scene) => scene.add(el));
+    this.selectedIDs = new Set([el.id]);
+    return el.id;
+  }
+
+  /** Stamp a library item onto the canvas with its top-left at `point`, re-id'd. */
+  insertLibraryItem(elements: ExcalidrawElement[], point: Point): string[] {
+    const live = elements.filter((e) => !e.isDeleted);
+    const box = commonBounds(live);
+    if (box === null) return [];
+    const dx = point.x - box.minX;
+    const dy = point.y - box.minY;
+    const newIDs: string[] = [];
+    this.store.transaction((scene) => {
+      for (const el of live) {
+        const copy = structuredClone(el);
+        copy.id = this.nextID();
+        copy.x += dx;
+        copy.y += dy;
+        scene.add(copy);
+        newIDs.push(copy.id);
+      }
+    });
+    this.selectedIDs = new Set(newIDs);
+    return newIDs;
+  }
+
+  // MARK: Generators — sticky notes, tables, charts
+
+  /** Create a sticky note (a filled rounded square + a centred bound text), grouped. */
+  createStickyNote(point: Point, color?: string): { container: string; text: string } {
+    const size = 160;
+    const groupID = this.nextID();
+    const containerID = this.nextID();
+    const textID = this.nextID();
+
+    const container: ExcalidrawElement = {
+      ...makeBase(this.currentItem, containerID, this.nextSeed(), point.x, point.y),
+      type: "rectangle",
+      width: size,
+      height: size,
+      backgroundColor: color ?? EditorController.stickyNoteColor,
+      fillStyle: "solid",
+      roundness: { type: RoundnessType.adaptiveRadius },
+      groupIds: [groupID],
+      boundElements: [{ id: textID, type: "text" }],
+    };
+    const text: ExcalidrawElement = {
+      ...makeBase(this.currentItem, textID, this.nextSeed(), point.x, point.y + size / 2),
+      type: "text",
+      ...defaultTextProps({
+        fontSize: this.currentItem.fontSize,
+        fontFamily: this.currentItem.fontFamily,
+        textAlign: "center",
+        verticalAlign: "middle",
+        containerId: containerID,
+        autoResize: false,
+      }),
+      backgroundColor: "transparent",
+      groupIds: [groupID],
+    };
+    this.store.modifyScene((scene) => {
+      scene.add(container);
+      scene.add(text);
+    });
+    this.selectedIDs = new Set([containerID]);
+    return { container: containerID, text: textID };
+  }
+
+  /** The text element bound to container `id`, if any. */
+  boundTextID(id: string): string | null {
+    const el = this.scene.element(id);
+    return el?.boundElements?.find((b) => b.type === "text")?.id ?? null;
+  }
+
+  /** The topmost container with bound text hit at `point` (selects it). */
+  boundTextHit(point: Point): { container: string; text: string } | null {
+    const threshold = this.handleHitRadius("mouse");
+    const visible = this.scene.visibleElements;
+    for (let k = visible.length - 1; k >= 0; k--) {
+      const el = visible[k]!;
+      if (!el.locked && hit(el, point, threshold)) {
+        const textID = this.boundTextID(el.id);
+        if (textID !== null) {
+          this.selectedIDs = new Set([el.id]);
+          return { container: el.id, text: textID };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Create a `rows × cols` table with its top-left at `point`, grouped and selected. */
+  createTable(point: Point, rows = 3, cols = 3): string {
+    const r = Math.max(rows, 1);
+    const c = Math.max(cols, 1);
+    const cellW = 120;
+    const cellH = 44;
+    const groupID = this.nextID();
+    this.store.transaction((scene) => {
+      for (let row = 0; row < r; row++) {
+        for (let col = 0; col < c; col++) {
+          this.addTableCell(
+            scene,
+            groupID,
+            point.x + col * cellW,
+            point.y + row * cellH,
+            cellW,
+            cellH,
+          );
+        }
+      }
+    });
+    this.selectedIDs = this.groupSiblings(this.tableCells(groupID)[0]?.id ?? "");
+    return groupID;
+  }
+
+  addTableRow(groupID: string): void {
+    const cells = this.tableCells(groupID);
+    const any = cells[0];
+    if (any === undefined) return;
+    const columns = [...new Set(cells.map((cell) => cell.x))].sort((a, b) => a - b);
+    const bottom = Math.max(...cells.map((cell) => cell.y + cell.height));
+    this.store.transaction((scene) => {
+      for (const x of columns) this.addTableCell(scene, groupID, x, bottom, any.width, any.height);
+    });
+  }
+
+  addTableColumn(groupID: string): void {
+    const cells = this.tableCells(groupID);
+    const any = cells[0];
+    if (any === undefined) return;
+    const rows = [...new Set(cells.map((cell) => cell.y))].sort((a, b) => a - b);
+    const right = Math.max(...cells.map((cell) => cell.x + cell.width));
+    this.store.transaction((scene) => {
+      for (const y of rows) this.addTableCell(scene, groupID, right, y, any.width, any.height);
+    });
+  }
+
+  /** Whether `id` belongs to a table. */
+  tableGroupID(id: string): string | null {
+    const value = this.scene.element(id)?.customData?.table;
+    return typeof value === "string" ? value : null;
+  }
+
+  private tableCells(group: string): ExcalidrawElement[] {
+    return this.scene.visibleElements
+      .filter((el) => el.customData?.table === group)
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+  }
+
+  private addTableCell(
+    scene: Scene,
+    group: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const cellID = this.nextID();
+    const textID = this.nextID();
+    scene.add({
+      ...makeBase(this.currentItem, cellID, this.nextSeed(), x, y),
+      type: "rectangle",
+      width,
+      height,
+      backgroundColor: "transparent",
+      groupIds: [group],
+      boundElements: [{ id: textID, type: "text" }],
+      customData: { table: group },
+    });
+    scene.add({
+      ...makeBase(this.currentItem, textID, this.nextSeed(), x, y + height / 2),
+      type: "text",
+      ...defaultTextProps({
+        fontSize: 16,
+        fontFamily: this.currentItem.fontFamily,
+        textAlign: "center",
+        verticalAlign: "middle",
+        containerId: cellID,
+        autoResize: false,
+      }),
+      backgroundColor: "transparent",
+      groupIds: [group],
+    });
+  }
+
+  /** Build a `kind` chart for `values` at `point`, grouped and selected. */
+  createChart(
+    point: Point,
+    values: number[],
+    labels: string[] = [],
+    kind: "bar" | "line" = "bar",
+  ): string | null {
+    const finite = values.filter((v) => Number.isFinite(v));
+    if (finite.length === 0) return null;
+    const maxValue = Math.max(Math.max(...finite), 1e-9);
+    const barWidth = 44;
+    const barGap = 22;
+    const step = barWidth + barGap;
+    const width = finite.length * step - barGap;
+    const height = 200;
+    const fill =
+      this.currentItem.backgroundColor === "transparent"
+        ? "#a5d8ff"
+        : this.currentItem.backgroundColor;
+    const groupID = this.nextID();
+
+    this.store.transaction((scene) => {
+      const axisValues: JSONValue[] = finite.map((v) => v);
+      scene.add({
+        ...makeBase(this.currentItem, this.nextID(), this.nextSeed(), point.x, point.y + height),
+        type: "line",
+        width,
+        groupIds: [groupID],
+        customData: { chart: { kind, values: axisValues } },
+        points: [
+          [0, 0],
+          [width, 0],
+        ],
+        startBinding: null,
+        endBinding: null,
+        startArrowhead: null,
+        endArrowhead: null,
+        polygon: false,
+      });
+
+      if (kind === "bar") {
+        for (let i = 0; i < finite.length; i++) {
+          const barHeight = (finite[i]! / maxValue) * height;
+          scene.add({
+            ...makeBase(
+              this.currentItem,
+              this.nextID(),
+              this.nextSeed(),
+              point.x + i * step,
+              point.y + height - barHeight,
+            ),
+            type: "rectangle",
+            width: barWidth,
+            height: barHeight,
+            backgroundColor: fill,
+            fillStyle: "solid",
+            groupIds: [groupID],
+          });
+        }
+      } else {
+        const points: LocalPoint[] = finite.map((v, i) => [
+          i * step + barWidth / 2,
+          height - (v / maxValue) * height,
+        ]);
+        const xs = points.map((p) => p[0]);
+        const ys = points.map((p) => p[1]);
+        scene.add({
+          ...makeBase(this.currentItem, this.nextID(), this.nextSeed(), point.x, point.y),
+          type: "line",
+          width: Math.max(...xs) - Math.min(...xs),
+          height: Math.max(...ys) - Math.min(...ys),
+          groupIds: [groupID],
+          roundness: { type: RoundnessType.proportionalRadius },
+          points,
+          startBinding: null,
+          endBinding: null,
+          startArrowhead: null,
+          endArrowhead: null,
+          polygon: false,
+        });
+      }
+
+      labels.forEach((label, i) => {
+        if (i >= finite.length || label.length === 0) return;
+        scene.add({
+          ...makeBase(
+            this.currentItem,
+            this.nextID(),
+            this.nextSeed(),
+            point.x + i * step,
+            point.y + height + 6,
+          ),
+          type: "text",
+          ...defaultTextProps({
+            fontSize: 14,
+            text: label,
+            originalText: label,
+            textAlign: "center",
+          }),
+          backgroundColor: "transparent",
+          groupIds: [groupID],
+        });
+      });
+    });
+
+    const last = [...this.scene.visibleElements]
+      .reverse()
+      .find((el) => el.groupIds.includes(groupID));
+    this.selectedIDs = this.groupSiblings(last?.id ?? "");
+    return groupID;
   }
 }
 
