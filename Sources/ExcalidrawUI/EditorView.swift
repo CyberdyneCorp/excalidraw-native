@@ -15,7 +15,7 @@ import UniformTypeIdentifiers
 /// carries zoom, theme, zen, and the command palette. Pointer input comes from
 /// `PointerInputView` (raw `UITouch`) on iOS.
 public struct EditorView: View {
-    @StateObject private var model: EditorModel
+    @StateObject var model: EditorModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.displayScale) private var displayScale
     @State private var exported = false
@@ -28,7 +28,8 @@ public struct EditorView: View {
         (.selection, "cursorarrow"), (.rectangle, "rectangle"), (.diamond, "diamond"),
         (.ellipse, "circle"), (.arrow, "arrow.up.right"), (.line, "line.diagonal"),
         (.freedraw, "scribble"), (.text, "textformat"), (.postit, "note.text"),
-        (.table, "tablecells"), (.frame, "rectangle.dashed"), (.eraser, "eraser"), (.hand, "hand.draw")
+        (.table, "tablecells"), (.frame, "rectangle.dashed"), (.eraser, "eraser"),
+        (.laser, "cursorarrow.rays"), (.hand, "hand.draw")
     ]
     private let palette = ["#1e1e1e", "#e03131", "#2f9e44", "#1971c2", "#f08c00"]
     private let fills = ["transparent", "#ffc9c9", "#b2f2bb", "#a5d8ff", "#ffec99"]
@@ -231,6 +232,7 @@ public struct EditorView: View {
                 .onChange(of: geo.size) { _, newSize in model.canvasSize = newSize }
         }
         .accessibilityIdentifier("excalidraw-canvas")
+        .overlay(trailOverlay)
         .overlay(inputLayer)
         .overlay(textEditor)
         .contextMenu { contextMenuItems }
@@ -504,52 +506,6 @@ public struct EditorView: View {
                 .accessibilityIdentifier("\(id)-\(color)")
             }
         }
-    }
-
-    /// Native color picker for arbitrary stroke/background colors. The iOS system
-    /// picker includes a screen **eyedropper**, so this also covers that gap.
-    private func customColorPicker(
-        current: String, id: String, default fallback: String, action: @escaping (String) -> Void
-    ) -> some View {
-        ColorPicker("", selection: Binding(
-            get: { Color(hex: current == "transparent" ? fallback : current) },
-            set: { action($0.hexString) }
-        ), supportsOpacity: false)
-            .labelsHidden()
-            .frame(width: 28)
-            .accessibilityIdentifier("\(id)-color-picker")
-    }
-
-    private let arrowheadOptions: [(Arrowhead?, String)] = [
-        (nil, "None"), (.arrow, "Arrow"), (.triangle, "Triangle"), (.diamond, "Diamond")
-    ]
-
-    /// Start/end arrowhead pickers for the selected/active arrow.
-    private var arrowheadControls: some View {
-        HStack(spacing: 6) {
-            arrowheadMenu(icon: "arrow.left", current: model.startArrowhead, id: "start") {
-                model.setStartArrowhead($0)
-            }
-            arrowheadMenu(icon: "arrow.right", current: model.endArrowhead, id: "end") {
-                model.setEndArrowhead($0)
-            }
-        }
-    }
-
-    private func arrowheadMenu(
-        icon: String, current: Arrowhead?, id: String, action: @escaping (Arrowhead?) -> Void
-    ) -> some View {
-        Menu {
-            ForEach(arrowheadOptions, id: \.1) { head, name in
-                Button { action(head) } label: {
-                    if current == head { Label(name, systemImage: "checkmark") } else { Text(name) }
-                }
-                .accessibilityIdentifier("arrowhead-\(id)-\(name)")
-            }
-        } label: {
-            Image(systemName: icon)
-        }
-        .accessibilityIdentifier("arrowhead-\(id)")
     }
 
     // MARK: Command palette
