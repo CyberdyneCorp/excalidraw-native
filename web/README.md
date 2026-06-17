@@ -15,7 +15,7 @@ web/
 │   ├── model/     @xs/model — element schema, scene, .excalidraw codecs ✅ T1
 │   ├── geometry/  @xs/geometry — bounds, hit-test, snapping, elbow A*  ✅ T2
 │   ├── render/    @xs/render — Canvas2D renderer, rough.js, SVG/PNG     🟡 T3
-│   ├── editor/    @xs/editor — tools, selection/transform, actions      🟡 T4
+│   ├── editor/    @xs/editor — tools, selection, generators, smart     ✅ T4
 │   ├── svelte/    @xs/svelte — Svelte 5 runes store + components          (T5)
 │   └── protocol/  @xs/protocol — collaboration wire schema               (T7)
 ├── apps/web/      browser app                                             (T5)
@@ -105,3 +105,9 @@ pnpm lint          # biome
     editing (fixable segments, drag-to-move with bend insertion,
     follow-endpoints). 12 tests ported from ElbowArrowTests. Still to port: the
     elbow editor wiring + flowchart spawning.
+  - **T4 slice 9 (completes T4):** elbow editor wiring (`setElbowed`,
+    `routeElbowArrow` on create + bound-arrow updates, segment-drag via the
+    linear-edit overlay with fixed-segment pinning, `resetElbowShape`) and
+    flowchart spawning (`addFlowchartNode` — clone the source node offset in a
+    direction with stagger, link by a bound elbow arrow). 15 tests ported from
+    ElbowArrowEditorTests + FlowchartTests. **`@xs/editor` is now feature-complete.**

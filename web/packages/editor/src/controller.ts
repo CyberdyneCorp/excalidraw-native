@@ -2,6 +2,7 @@ import {
   BoundingBox,
   CropGeometry,
   DEFAULT_SNAP_DISTANCE,
+  ElbowArrow,
   type RecognizedShape,
   type ShapeRecognition,
   ShapeRecognizer,
@@ -9,19 +10,24 @@ import {
   commonBounds,
   bounds as elementBounds,
   fixedPointFor,
+  flippedHeading,
   frameChildren,
   frameContaining,
   gapSnap,
+  headingFromBoxToward,
   hit,
+  isBindable,
   isFrame,
   snap as objectSnap,
   pointForFixedPoint,
 } from "@xs/geometry";
 import { Point } from "@xs/math";
 import {
+  type ArrowElement,
   type BaseProperties,
   type BinaryFileData,
   type ExcalidrawElement,
+  type FixedSegment,
   type ImageCrop,
   type JSONValue,
   type LocalPoint,
@@ -55,6 +61,7 @@ type Interaction =
 
 export type ZOrder = "front" | "back" | "forward" | "backward";
 export type Alignment = "left" | "centerX" | "right" | "top" | "centerY" | "bottom";
+export type FlowchartDirection = "up" | "down" | "left" | "right";
 
 /**
  * The editing state machine: turns scene-space pointer events into element
@@ -78,6 +85,7 @@ export class EditorController {
   /** The image currently in crop mode (`null` when not cropping). */
   editingCropID: string | null = null;
 
+  private elbowDrag: { id: string; index: number } | null = null;
   private cropNaturalSize: { width: number; height: number } | null = null;
   private cropDrag: {
     handle: TransformHandle;
@@ -152,6 +160,11 @@ export class EditorController {
       this.moveCropDrag(e.scenePoint);
       return;
     }
+    if (this.elbowDrag !== null) {
+      const newIndex = this.moveElbowSegment(this.elbowDrag.id, this.elbowDrag.index, e.scenePoint);
+      this.elbowDrag = { id: this.elbowDrag.id, index: newIndex };
+      return;
+    }
     const i = this.interaction;
     switch (i.kind) {
       case "creating":
@@ -212,6 +225,11 @@ export class EditorController {
   pointerUp(e: PointerEvent): void {
     if (this.cropDrag !== null) {
       this.cropDrag = null;
+      this.store.commit();
+      return;
+    }
+    if (this.elbowDrag !== null) {
+      this.elbowDrag = null;
       this.store.commit();
       return;
     }
@@ -389,6 +407,7 @@ export class EditorController {
 
   exitLinearEdit(): void {
     this.editingLinearID = null;
+    this.elbowDrag = null;
   }
 
   /** Global vertex + midpoint positions for the line being edited (for the overlay). */
@@ -414,6 +433,17 @@ export class EditorController {
       return false;
     }
     const threshold = this.handleHitRadius(e.type);
+    // Elbow arrows are reshaped by dragging whole segments, not vertices.
+    if (el.type === "arrow" && el.elbowed) {
+      for (const handle of this.elbowSegmentHandles(id)) {
+        if (handle.point.distance(e.scenePoint) <= threshold) {
+          this.elbowDrag = { id, index: handle.index };
+          return true;
+        }
+      }
+      this.exitLinearEdit();
+      return false;
+    }
     for (let i = 0; i < pts.length; i++) {
       const global = new Point(el.x + pts[i]![0], el.y + pts[i]![1]);
       if (global.distance(e.scenePoint) <= threshold) {
@@ -696,6 +726,7 @@ export class EditorController {
       this.selectedIDs = new Set();
     } else {
       if (this.bindingEnabled) this.bindArrowEndpoints(id);
+      this.routeElbowArrow(id);
       this.reassignFrameMembership(new Set([id]));
       this.store.commit();
       if (!this.toolLocked) this.activeTool = "selection";
@@ -1316,6 +1347,252 @@ export class EditorController {
     return polylineElement(base, closed, true);
   }
 
+  // MARK: Elbow arrows
+
+  /** Re-route elbow arrow `id` from its current endpoints. */
+  routeElbowArrow(id: string): void {
+    this.store.modifyScene((scene) => {
+      const arrow = scene.element(id);
+      if (arrow === undefined || arrow.type !== "arrow" || !arrow.elbowed) return;
+      const first = arrow.points[0];
+      const last = arrow.points[arrow.points.length - 1];
+      if (first === undefined || last === undefined) return;
+      const startGlobal = new Point(arrow.x + first[0], arrow.y + first[1]);
+      const endGlobal = new Point(arrow.x + last[0], arrow.y + last[1]);
+      scene.replace(applyElbowRoute(scene, arrow, startGlobal, endGlobal));
+    });
+  }
+
+  /** Set elbow mode for new arrows and convert any selected arrows, re-routing. */
+  setElbowed(elbowed: boolean): void {
+    this.currentItem.elbowed = elbowed;
+    const arrowIDs = this.selectedElements.filter((e) => e.type === "arrow").map((e) => e.id);
+    if (arrowIDs.length === 0) return;
+    this.store.transaction((scene) => {
+      for (const id of arrowIDs) {
+        const arrow = scene.element(id);
+        if (arrow === undefined || arrow.type !== "arrow" || arrow.elbowed === elbowed) continue;
+        const first = arrow.points[0];
+        const last = arrow.points[arrow.points.length - 1];
+        if (first === undefined || last === undefined) continue;
+        let updated: ArrowElement = { ...arrow, elbowed };
+        if (elbowed) {
+          const startGlobal = new Point(arrow.x + first[0], arrow.y + first[1]);
+          const endGlobal = new Point(arrow.x + last[0], arrow.y + last[1]);
+          updated = applyElbowRoute(scene, updated, startGlobal, endGlobal);
+        }
+        scene.replace(updated);
+      }
+    });
+  }
+
+  /** Global segment midpoints of elbow arrow `id` (for the edit overlay). */
+  elbowSegmentHandles(id: string): { index: number; point: Point }[] {
+    const el = this.scene.element(id);
+    if (el === undefined || el.type !== "arrow" || !el.elbowed) return [];
+    const global = el.points.map((p) => new Point(el.x + p[0], el.y + p[1]));
+    return ElbowArrow.segments(global).map((s) => ({ index: s.index, point: s.midpoint }));
+  }
+
+  /** Drag segment `index` of elbow arrow `id` through `point`, pinning it. */
+  moveElbowSegment(id: string, index: number, point: Point): number {
+    let resultIndex = index;
+    this.store.modifyScene((scene) => {
+      const arrow = scene.element(id);
+      if (arrow === undefined || arrow.type !== "arrow" || !arrow.elbowed) return;
+      const global = arrow.points.map((p) => new Point(arrow.x + p[0], arrow.y + p[1]));
+      const moved = ElbowArrow.moveSegment(global, index, point);
+      resultIndex = moved.index;
+      const origin = moved.points[0] ?? point;
+      const points: LocalPoint[] = moved.points.map((p) => [p.x - origin.x, p.y - origin.y]);
+      const xs = points.map((p) => p[0]);
+      const ys = points.map((p) => p[1]);
+      const updated: ArrowElement = {
+        ...arrow,
+        points,
+        x: origin.x,
+        y: origin.y,
+        width: Math.max(...xs) - Math.min(...xs),
+        height: Math.max(...ys) - Math.min(...ys),
+      };
+      if (moved.index < 0 || moved.index >= points.length) {
+        scene.replace(updated);
+        return;
+      }
+      const pinned: FixedSegment = {
+        start: points[moved.index - 1]!,
+        end: points[moved.index]!,
+        index: moved.index,
+      };
+      const segments = (arrow.fixedSegments ?? []).slice();
+      const existing = segments.findIndex((s) => s.index === moved.index);
+      if (existing !== -1) segments[existing] = pinned;
+      else {
+        segments.push(pinned);
+        segments.sort((a, b) => a.index - b.index);
+      }
+      scene.replace({ ...updated, fixedSegments: segments });
+    });
+    return resultIndex;
+  }
+
+  /** Release every pinned segment of elbow arrow `id` and re-route it. */
+  resetElbowShape(id: string): void {
+    const el = this.scene.element(id);
+    if (
+      el === undefined ||
+      el.type !== "arrow" ||
+      !el.elbowed ||
+      (el.fixedSegments?.length ?? 0) === 0
+    ) {
+      return;
+    }
+    this.store.transaction((scene) => {
+      const arrow = scene.element(id);
+      if (arrow === undefined || arrow.type !== "arrow") return;
+      const first = arrow.points[0];
+      const last = arrow.points[arrow.points.length - 1];
+      if (first === undefined || last === undefined) return;
+      const cleared: ArrowElement = { ...arrow, fixedSegments: undefined };
+      const startGlobal = new Point(arrow.x + first[0], arrow.y + first[1]);
+      const endGlobal = new Point(arrow.x + last[0], arrow.y + last[1]);
+      scene.replace(applyElbowRoute(scene, cleared, startGlobal, endGlobal));
+    });
+  }
+
+  /** Whether elbow arrow `id` currently has any pinned segments. */
+  hasFixedSegments(id: string): boolean {
+    const el = this.scene.element(id);
+    return el !== undefined && el.type === "arrow" && (el.fixedSegments?.length ?? 0) > 0;
+  }
+
+  // MARK: Flowchart spawning
+
+  /** Spawn a node from `id` in `direction`, linked by a bound elbow arrow. */
+  addFlowchartNode(
+    id: string,
+    direction: FlowchartDirection,
+  ): { node: string; arrow: string } | null {
+    const source = this.scene.element(id);
+    if (source === undefined || !isBindable(source) || isLinearElement(source)) return null;
+    const gap = 100;
+    const offset =
+      direction === "right"
+        ? { x: source.width + gap, y: 0 }
+        : direction === "left"
+          ? { x: -(source.width + gap), y: 0 }
+          : direction === "down"
+            ? { x: 0, y: source.height + gap }
+            : { x: 0, y: -(source.height + gap) };
+    const stagger = this.flowchartStagger(source, direction);
+    const nodeID = this.nextID();
+    const newNode: ExcalidrawElement = {
+      ...structuredClone(source),
+      id: nodeID,
+      seed: this.nextSeed(),
+      x: source.x + offset.x + stagger.x,
+      y: source.y + offset.y + stagger.y,
+      boundElements: null,
+      groupIds: [],
+    };
+    const arrowID = this.nextID();
+    const arrow = this.makeBindingArrow(arrowID, source, newNode, direction);
+
+    this.store.transaction((scene) => {
+      scene.add(newNode);
+      scene.add(arrow);
+      addBoundArrow(scene, arrowID, id);
+      addBoundArrow(scene, arrowID, nodeID);
+      const routed = scene.element(arrowID);
+      if (routed !== undefined && routed.type === "arrow") {
+        const first = routed.points[0];
+        const last = routed.points[routed.points.length - 1];
+        if (first !== undefined && last !== undefined) {
+          const startGlobal = new Point(routed.x + first[0], routed.y + first[1]);
+          const endGlobal = new Point(routed.x + last[0], routed.y + last[1]);
+          scene.replace(applyElbowRoute(scene, routed, startGlobal, endGlobal));
+        }
+      }
+    });
+    this.selectedIDs = new Set([nodeID]);
+    return { node: nodeID, arrow: arrowID };
+  }
+
+  private flowchartStagger(
+    source: ExcalidrawElement,
+    direction: FlowchartDirection,
+  ): { x: number; y: number } {
+    const count = this.linkedNodeCount(source, direction);
+    if (count <= 0) return { x: 0, y: 0 };
+    const step = Math.floor((count + 1) / 2);
+    const sign = count % 2 === 0 ? -1 : 1;
+    const amount = step * sign;
+    if (direction === "up" || direction === "down")
+      return { x: (source.width + 100) * amount, y: 0 };
+    return { x: 0, y: (source.height + 100) * amount };
+  }
+
+  private linkedNodeCount(source: ExcalidrawElement, direction: FlowchartDirection): number {
+    const arrowIDs = new Set(
+      (source.boundElements ?? []).filter((b) => b.type === "arrow").map((b) => b.id),
+    );
+    const box = elementBounds(source);
+    let count = 0;
+    for (const el of this.scene.visibleElements) {
+      if (!arrowIDs.has(el.id) || el.type !== "arrow") continue;
+      const first = el.points[0];
+      const last = el.points[el.points.length - 1];
+      if (first === undefined || last === undefined) continue;
+      const start = new Point(el.x + first[0], el.y + first[1]);
+      const end = new Point(el.x + last[0], el.y + last[1]);
+      const outward = box.contains(start) ? end : start;
+      if (headingFromBoxToward(box, outward) === direction) count++;
+    }
+    return count;
+  }
+
+  private makeBindingArrow(
+    id: string,
+    source: ExcalidrawElement,
+    target: ExcalidrawElement,
+    direction: FlowchartDirection,
+  ): ArrowElement {
+    const sBox = elementBounds(source);
+    const tBox = elementBounds(target);
+    const start = edgePoint(sBox, direction);
+    const end = edgePoint(tBox, flippedHeading(direction) as FlowchartDirection);
+    return {
+      ...baseOf(source),
+      id,
+      seed: this.nextSeed(),
+      x: start.x,
+      y: start.y,
+      width: Math.abs(end.x - start.x),
+      height: Math.abs(end.y - start.y),
+      backgroundColor: "transparent",
+      boundElements: null,
+      groupIds: [],
+      type: "arrow",
+      points: [
+        [0, 0],
+        [end.x - start.x, end.y - start.y],
+      ],
+      startBinding: {
+        elementId: source.id,
+        fixedPoint: fixedPointFor(start, sBox).toArray(),
+        mode: "orbit",
+      },
+      endBinding: {
+        elementId: target.id,
+        fixedPoint: fixedPointFor(end, tBox).toArray(),
+        mode: "orbit",
+      },
+      startArrowhead: null,
+      endArrowhead: "arrow",
+      elbowed: true,
+    };
+  }
+
   /** Parse `text` as a Mermaid flowchart and insert it with top-left at `point`. */
   insertMermaid(text: string, point: Point): boolean {
     const parsed = parseMermaid(text, this.nextSeed());
@@ -1521,18 +1798,92 @@ function updateBoundArrows(scene: Scene, skipping: Set<string>): void {
         );
       }
     }
-    scene.replace({
-      ...element,
-      x: startGlobal.x,
-      y: startGlobal.y,
-      width: Math.abs(endGlobal.x - startGlobal.x),
-      height: Math.abs(endGlobal.y - startGlobal.y),
-      points: [
-        [0, 0],
-        [endGlobal.x - startGlobal.x, endGlobal.y - startGlobal.y],
-      ],
-    });
+    if (element.elbowed) {
+      scene.replace(applyElbowRoute(scene, element, startGlobal, endGlobal));
+    } else {
+      scene.replace({
+        ...element,
+        x: startGlobal.x,
+        y: startGlobal.y,
+        width: Math.abs(endGlobal.x - startGlobal.x),
+        height: Math.abs(endGlobal.y - startGlobal.y),
+        points: [
+          [0, 0],
+          [endGlobal.x - startGlobal.x, endGlobal.y - startGlobal.y],
+        ],
+      });
+    }
   }
+}
+
+/** Bounds of the element with `id`, or null. */
+function boundsOfId(scene: Scene, id: string): BoundingBox | null {
+  const el = scene.element(id);
+  return el === undefined ? null : elementBounds(el);
+}
+
+/**
+ * Rewrite an arrow's points as the elbow route between two global endpoints,
+ * re-anchoring its origin/size. No-op for non-elbow arrows. (parity: applyElbowRoute)
+ */
+function applyElbowRoute(
+  scene: Scene,
+  arrow: ArrowElement,
+  startGlobal: Point,
+  endGlobal: Point,
+): ArrowElement {
+  if (!arrow.elbowed) return arrow;
+  const fixed = arrow.fixedSegments;
+  let routed: Point[];
+  if (fixed !== undefined && fixed.length > 0 && arrow.points.length >= 4) {
+    const global = arrow.points.map((p) => new Point(arrow.x + p[0], arrow.y + p[1]));
+    routed = ElbowArrow.followEndpoints(global, startGlobal, endGlobal);
+  } else {
+    const startBox =
+      arrow.startBinding !== null ? boundsOfId(scene, arrow.startBinding.elementId) : null;
+    const endBox = arrow.endBinding !== null ? boundsOfId(scene, arrow.endBinding.elementId) : null;
+    routed = ElbowArrow.route(startGlobal, startBox, endGlobal, endBox);
+  }
+  const origin = routed[0] ?? startGlobal;
+  const points: LocalPoint[] = routed.map((p) => [p.x - origin.x, p.y - origin.y]);
+  let fixedSegments = arrow.fixedSegments;
+  if (fixedSegments !== undefined && fixedSegments.length > 0) {
+    fixedSegments = fixedSegments.flatMap((seg) =>
+      seg.index < 0 || seg.index >= points.length
+        ? []
+        : [{ start: points[seg.index - 1]!, end: points[seg.index]!, index: seg.index }],
+    );
+  }
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  return {
+    ...arrow,
+    points,
+    x: origin.x,
+    y: origin.y,
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+    fixedSegments,
+  };
+}
+
+function edgePoint(box: BoundingBox, heading: FlowchartDirection): Point {
+  const midX = (box.minX + box.maxX) / 2;
+  const midY = (box.minY + box.maxY) / 2;
+  switch (heading) {
+    case "up":
+      return new Point(midX, box.minY);
+    case "down":
+      return new Point(midX, box.maxY);
+    case "left":
+      return new Point(box.minX, midY);
+    case "right":
+      return new Point(box.maxX, midY);
+  }
+}
+
+function isLinearElement(el: ExcalidrawElement): boolean {
+  return el.type === "arrow" || el.type === "line" || el.type === "freedraw";
 }
 
 /** Extract just the base properties of an element (dropping type-specific fields). */
