@@ -23,9 +23,25 @@
     { tool: "freedraw", label: "✎ Draw" },
     { tool: "text", label: "T Text" },
     { tool: "frame", label: "⛶ Frame" },
+    { tool: "laser", label: "⦿ Laser" },
     { tool: "eraser", label: "⌫ Erase" },
     { tool: "hand", label: "✋ Hand" },
   ];
+
+  let fileInput: HTMLInputElement;
+
+  function importImage(e: Event): void {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    if (file === undefined) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataURL = reader.result as string;
+      const img = new Image();
+      img.onload = () => store.insertImage(dataURL, file.type, img.naturalWidth, img.naturalHeight);
+      img.src = dataURL;
+    };
+    reader.readAsDataURL(file);
+  }
 
   let strokeColor = $state("#1e1e1e");
   let backgroundColor = $state("transparent");
@@ -110,6 +126,8 @@
     <button onclick={() => store.insertTable()}>Table</button>
     <button onclick={() => store.insertChart([10, 20, 15, 30])}>Chart</button>
     <button onclick={() => store.insertMermaid(mermaidSample)}>Mermaid</button>
+    <button onclick={() => fileInput.click()}>Image</button>
+    <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={importImage} />
   </header>
 
   <section class="props">
@@ -125,6 +143,14 @@
     <button onclick={() => store.deleteSelected()}>Delete</button>
     <button onclick={() => store.duplicate()}>Duplicate</button>
     <button onclick={() => store.group()}>Group</button>
+    <button onclick={() => store.ungroup()}>Ungroup</button>
+    <span class="sep"></span>
+    <button title="Align left" onclick={() => store.align("left")}>⇤</button>
+    <button title="Align centre" onclick={() => store.align("centerX")}>↔</button>
+    <button title="Align right" onclick={() => store.align("right")}>⇥</button>
+    <button title="Flip horizontal" onclick={() => store.flip(true)}>⇋</button>
+    <button title="Bring to front" onclick={() => store.reorder("front")}>⤒</button>
+    <button title="Send to back" onclick={() => store.reorder("back")}>⤓</button>
   </section>
 
   <main class="stage">

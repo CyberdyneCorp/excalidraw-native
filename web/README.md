@@ -127,3 +127,9 @@ pnpm lint          # biome
     **keyboard shortcuts** (tool keys, ⌘Z/⌘⇧Z, ⌘D, ⌘A, Delete). 6 more tests.
     Still to do: laser/eraser trails, command palette, image import, two-finger
     gestures.
+  - **T5 slice 3:** laser/eraser fading **trails** (`TrailStore` in `@xs/svelte`,
+    parity TrailStore) — laser paints a trail and creates nothing, the eraser
+    paints a trail and still erases; rendered in the overlay with age-based
+    opacity and animated by the canvas. Plus **image import** (file → data-URL →
+    downscaled image element) and toolbar **align / flip / z-order** actions.
+    5 more tests (TrailStore + laser/eraser via the store).

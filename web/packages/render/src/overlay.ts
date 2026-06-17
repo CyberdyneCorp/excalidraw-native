@@ -9,6 +9,11 @@ const SNAP = "rgba(232,77,61,0.9)";
 const WHITE = "#ffffff";
 const TWO_PI = Math.PI * 2;
 
+export interface TrailDot {
+  position: Point;
+  time: number;
+}
+
 export interface OverlayOptions {
   viewport: Viewport;
   width: number;
@@ -24,6 +29,37 @@ export interface OverlayOptions {
   cropFrame?: BoundingBox | null;
   cropHandles?: Point[];
   handleSizePx?: number;
+  /** Current time (seconds) for fading the laser/eraser trails. */
+  now?: number;
+  laserDots?: TrailDot[];
+  eraserDots?: TrailDot[];
+}
+
+const TRAIL_FADE = 0.7;
+
+function drawTrail(
+  ctx: RenderContext,
+  dots: TrailDot[],
+  now: number,
+  color: string,
+  width: number,
+): void {
+  if (dots.length < 2) return;
+  ctx.strokeStyle = color;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = width;
+  ctx.setLineDash([]);
+  for (let i = 1; i < dots.length; i++) {
+    const alpha = 1 - (now - dots[i]!.time) / TRAIL_FADE;
+    if (alpha <= 0) continue;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(dots[i - 1]!.position.x, dots[i - 1]!.position.y);
+    ctx.lineTo(dots[i]!.position.x, dots[i]!.position.y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function squareHandle(ctx: RenderContext, p: Point, size: number, lineWidth: number): void {
@@ -122,6 +158,10 @@ export function renderOverlay(ctx: RenderContext, o: OverlayOptions): void {
     ctx.fillStyle = ACCENT;
     ctx.fill();
   }
+
+  const now = o.now ?? 0;
+  drawTrail(ctx, o.laserDots ?? [], now, "#ff2d2d", 4 / v.zoom);
+  drawTrail(ctx, o.eraserDots ?? [], now, "#9aa0a6", 10 / v.zoom);
 
   ctx.restore();
 }

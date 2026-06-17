@@ -33,6 +33,19 @@
     draw();
   });
 
+  // Animate the fading laser/eraser trails while one is active.
+  $effect(() => {
+    void store.revision;
+    if (store.activeTool !== "laser" && store.activeTool !== "eraser") return;
+    let raf = 0;
+    const tick = (): void => {
+      draw();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  });
+
   $effect(() => {
     const ro = new ResizeObserver((entries) => {
       const r = entries[0]?.contentRect;

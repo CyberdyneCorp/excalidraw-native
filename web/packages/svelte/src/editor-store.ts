@@ -24,6 +24,11 @@ import {
   exportSvg,
   renderScene,
 } from "@xs/render";
+import { TrailStore } from "./trail-store.js";
+
+function nowSeconds(): number {
+  return (typeof performance !== "undefined" ? performance.now() : 0) / 1000;
+}
 
 function clampZoom(zoom: number): number {
   return Math.min(Math.max(zoom, ZOOM_RANGE.min), ZOOM_RANGE.max);
@@ -35,6 +40,8 @@ export interface PointerOptions {
   shift?: boolean;
   alt?: boolean;
   toggle?: boolean;
+  /** Current time (seconds) for laser/eraser trails; defaults to `performance.now()`. */
+  now?: number;
 }
 
 /**
@@ -45,6 +52,7 @@ export interface PointerOptions {
  */
 export class EditorStore {
   readonly controller: EditorController;
+  readonly trail = new TrailStore();
   viewport: Viewport;
   revision = 0;
   theme: Theme = "light";
@@ -97,6 +105,19 @@ export class EditorStore {
       return;
     }
     const scenePoint = this.viewport.viewToScene(viewPoint);
+    const now = opts.now ?? nowSeconds();
+
+    // The laser pointer only paints a fading trail — it creates/selects nothing.
+    if (this.activeTool === "laser") {
+      if (phase !== "up") this.trail.addLaser(scenePoint, now);
+      this.bump();
+      return;
+    }
+    // The eraser paints a trail AND still erases (forwarded below).
+    if (this.activeTool === "eraser" && phase !== "up") {
+      this.trail.addEraser(scenePoint, now);
+    }
+
     const event = pointerEvent(scenePoint, phase, {
       type: opts.type,
       pressure: opts.pressure,
@@ -235,6 +256,37 @@ export class EditorStore {
     this.controller.selectAll();
     this.bump();
   }
+  align(alignment: Parameters<EditorController["align"]>[0]): void {
+    this.controller.align(alignment);
+    this.bump();
+  }
+  flip(horizontal: boolean): void {
+    this.controller.flip(horizontal);
+    this.bump();
+  }
+  setLocked(locked: boolean): void {
+    this.controller.setLocked(locked);
+    this.bump();
+  }
+  reorder(order: Parameters<EditorController["reorder"]>[0]): void {
+    this.controller.reorder(order);
+    this.bump();
+  }
+
+  /** Insert an image (downscaled to a max dimension) at the viewport centre. */
+  insertImage(
+    dataURL: string,
+    mimeType: string,
+    naturalWidth: number,
+    naturalHeight: number,
+  ): void {
+    const scale = Math.min(1, 320 / Math.max(naturalWidth, naturalHeight, 1));
+    const w = naturalWidth * scale;
+    const h = naturalHeight * scale;
+    const c = this.viewportCenterScene();
+    this.controller.insertImage(dataURL, mimeType, new Point(c.x - w / 2, c.y - h / 2), w, h);
+    this.bump();
+  }
 
   // MARK: Generators (placed at the viewport centre)
 
@@ -311,8 +363,8 @@ export class EditorStore {
     renderScene(ctx, this.scene, { viewport: this.viewport, width, height, theme: this.theme });
   }
 
-  /** Draw the interactive overlay (selection, handles, marquee, edit handles). */
-  renderOverlay(ctx: RenderContext, width: number, height: number): void {
+  /** Draw the interactive overlay (selection, handles, marquee, edit handles, trails). */
+  renderOverlay(ctx: RenderContext, width: number, height: number, now = nowSeconds()): void {
     const c = this.controller;
     const handlesMap = c.transformHandles();
     const rotationHandle = handlesMap.get("rotation") ?? null;
@@ -347,6 +399,9 @@ export class EditorStore {
       linearMidpoints,
       cropFrame: c.cropFrame(),
       cropHandles: c.cropEditHandles() ?? [],
+      now,
+      laserDots: this.trail.visibleLaser(now),
+      eraserDots: this.trail.visibleEraser(now),
     });
   }
 
