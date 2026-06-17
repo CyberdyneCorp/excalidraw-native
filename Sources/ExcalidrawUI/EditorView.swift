@@ -20,6 +20,8 @@ public struct EditorView: View {
     @Environment(\.displayScale) private var displayScale
     @State private var exported = false
     @State private var hoverPoint: CGPoint?
+    @State var showDocImporter = false
+    @State var showDocExporter = false
     @State private var photoItem: PhotosPickerItem?
     @State private var importingLibrary = false
     @State private var exportingLibrary = false
@@ -76,6 +78,7 @@ public struct EditorView: View {
             Text("Embed a YouTube, Vimeo, Figma, CodeSandbox… page.")
         }
         .environment(\.layoutDirection, model.layoutDirection)
+        .modifier(documentSupport())
     }
 
     private var librarySheet: some View {
@@ -512,6 +515,7 @@ public struct EditorView: View {
                 .accessibilityIdentifier("embed")
             Button { model.showChartInput = true } label: { Image(systemName: "chart.bar") }
                 .accessibilityIdentifier("chart")
+            documentsMenu
             Button { model.showLibrary = true } label: { Image(systemName: "books.vertical") }
                 .accessibilityIdentifier("library")
             Button { model.showCommandPalette = true } label: { Image(systemName: "command") }
