@@ -66,10 +66,8 @@ public enum TextLayout {
     /// system font for an Excalidraw-like feel; bundling the actual fonts with
     /// matching metrics is a later refinement.
     static func fontName(for family: Int) -> String {
-        switch family {
-        case FontFamily.helvetica, FontFamily.liberationSans, FontFamily.assistant: "Helvetica"
-        case FontFamily.cascadia, FontFamily.comicShanns: "Menlo"
-        default: "Bradley Hand" // Excalifont / Virgil / Nunito / LilitaOne → handwriting
-        }
+        // Prefer a bundled Excalidraw font when present; otherwise a system
+        // handwriting/sans/mono fallback (see `FontRegistry`).
+        FontRegistry.fontName(for: family)
     }
 }

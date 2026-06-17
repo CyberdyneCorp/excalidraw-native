@@ -8,20 +8,32 @@
     /// don't expose `force`/coalesced touches, so this drops to UIKit.
     struct PointerInputView: UIViewRepresentable {
         let model: EditorModel
+        /// Apple Pencil hover location (17.5+ reports it while hovering), or `nil`
+        /// when the pencil leaves the proximity zone. Drives the hover preview.
+        var onHover: (CGPoint?) -> Void = { _ in }
+        /// Apple Pencil Pro squeeze.
+        var onSqueeze: () -> Void = {}
 
         func makeUIView(context _: Context) -> TouchCaptureView {
             let view = TouchCaptureView()
             view.model = model
+            view.onHover = onHover
+            view.onSqueeze = onSqueeze
+            view.setUpPencil()
             return view
         }
 
         func updateUIView(_ view: TouchCaptureView, context _: Context) {
             view.model = model
+            view.onHover = onHover
+            view.onSqueeze = onSqueeze
         }
     }
 
-    final class TouchCaptureView: UIView {
+    final class TouchCaptureView: UIView, UIPencilInteractionDelegate {
         var model: EditorModel?
+        var onHover: (CGPoint?) -> Void = { _ in }
+        var onSqueeze: () -> Void = {}
 
         private var pencilActive = false
         private var gesturing = false
@@ -47,6 +59,34 @@
         @available(*, unavailable)
         required init?(coder _: NSCoder) {
             fatalError("not used")
+        }
+
+        /// Wire up Apple Pencil hover (a hover gesture, 16.1+; with z-offset on
+        /// 17.5+) and Pencil Pro squeeze (`UIPencilInteraction`).
+        func setUpPencil() {
+            let hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover))
+            addGestureRecognizer(hover)
+            let pencil = UIPencilInteraction()
+            pencil.delegate = self
+            addInteraction(pencil)
+        }
+
+        @objc private func handleHover(_ recognizer: UIHoverGestureRecognizer) {
+            switch recognizer.state {
+            case .began, .changed: onHover(recognizer.location(in: self))
+            default: onHover(nil)
+            }
+        }
+
+        /// Pencil Pro squeeze (17.5+).
+        @available(iOS 17.5, *)
+        func pencilInteraction(_: UIPencilInteraction, didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
+            if squeeze.phase == .ended { onSqueeze() }
+        }
+
+        /// Older double-tap (kept so the interaction is useful pre-Pencil-Pro too).
+        func pencilInteractionDidTap(_: UIPencilInteraction) {
+            onSqueeze()
         }
 
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
