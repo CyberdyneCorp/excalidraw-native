@@ -79,6 +79,8 @@ public struct EditorView: View {
         }
         .environment(\.layoutDirection, model.layoutDirection)
         .modifier(documentSupport())
+        .onAppear { model.joinCollabFromLaunchArguments() }
+        .overlay(alignment: .topTrailing) { collabStatus }
     }
 
     private var librarySheet: some View {

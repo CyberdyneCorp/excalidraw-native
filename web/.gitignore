@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+.svelte-kit/
+.DS_Store
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/

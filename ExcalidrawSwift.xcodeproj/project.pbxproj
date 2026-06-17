@@ -14,6 +14,7 @@
 		49CB6D2DCBEB8E7D59713BBC /* ExcalidrawRender in Frameworks */ = {isa = PBXBuildFile; productRef = 7970334A2DD0CAB06316DA3C /* ExcalidrawRender */; };
 		838DFCC2CC809E301183E0EA /* ExcalidrawRender in Frameworks */ = {isa = PBXBuildFile; productRef = 149492DF6CA44C6B58BF54B1 /* ExcalidrawRender */; };
 		867447BF5E89709D59229A49 /* ExcalidrawApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E1A9EAB0F2CFE2960655AE /* ExcalidrawApp.swift */; };
+		8908A2AEF109C225373A610A /* CollabLiveUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47704B1B30F43C2F26861A2 /* CollabLiveUITests.swift */; };
 		8F813DB42A25BD00D1EF2C87 /* ExcalidrawUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11ED78A939E9552DD837CAF1 /* ExcalidrawUI */; };
 		930073DE79E38D451390A449 /* ExcalidrawMath in Frameworks */ = {isa = PBXBuildFile; productRef = C07EB7C668076453F18C1B6B /* ExcalidrawMath */; };
 		BB2E451AC70807DB3531B87D /* sample.excalidraw in Resources */ = {isa = PBXBuildFile; fileRef = F04B3645468416DBC8FE24BA /* sample.excalidraw */; };
@@ -45,6 +46,7 @@
 		3349E74A0542B72D9CD8FE27 /* ExcalidrawApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ExcalidrawApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		B6AC1B0B22AD9A2E10F2FB35 /* ExcalidrawAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ExcalidrawAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C47704B1B30F43C2F26861A2 /* CollabLiveUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollabLiveUITests.swift; sourceTree = "<group>"; };
 		D2125AB83EBC165D109874A3 /* RendererComparisonBenchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererComparisonBenchmark.swift; sourceTree = "<group>"; };
 		F04B3645468416DBC8FE24BA /* sample.excalidraw */ = {isa = PBXFileReference; path = sample.excalidraw; sourceTree = "<group>"; };
 		FA5A5054011404F7553BA250 /* RenderDeviceBenchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDeviceBenchmark.swift; sourceTree = "<group>"; };
@@ -96,6 +98,7 @@
 		6430DDFE747C8B1AE7D1C14F /* AppUITests */ = {
 			isa = PBXGroup;
 			children = (
+				C47704B1B30F43C2F26861A2 /* CollabLiveUITests.swift */,
 				661DF4DF2B7A007A864DFD01 /* SmokeUITests.swift */,
 			);
 			path = AppUITests;
@@ -276,6 +279,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8908A2AEF109C225373A610A /* CollabLiveUITests.swift in Sources */,
 				D24DD6A402E1EB6E7D7D3161 /* SmokeUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

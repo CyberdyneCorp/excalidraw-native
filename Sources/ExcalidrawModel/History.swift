@@ -116,6 +116,13 @@ public struct Store: Sendable {
         body(&scene)
     }
 
+    /// Advance the undo baseline to the current scene *without* recording a step
+    /// — used after applying a remote collaborative update so it doesn't fold
+    /// into the local user's next undo. (parity: TS `Store.rebase`)
+    public mutating func rebase() {
+        snapshot = scene.elements
+    }
+
     /// Capture any changes made to `scene` since the last commit as one undo step.
     public mutating func commit() {
         let delta = SceneDelta.between(snapshot, scene.elements)

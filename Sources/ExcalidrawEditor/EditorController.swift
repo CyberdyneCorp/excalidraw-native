@@ -48,8 +48,23 @@ public final class EditorController {
         let fullBox: BoundingBox
     }
 
-    let nextID: () -> String
+    private let customIDProvider: (() -> String)?
+    private var idCounter = 0
     let nextSeed: () -> Int
+
+    /// Prefix for generated element ids. Set to a per-client value (e.g. the
+    /// peer id) during collaboration so two clients never mint colliding ids — a
+    /// collision would make one client's new element lose reconciliation against
+    /// the other's same-id element. (parity: TS `EditorController.idPrefix`)
+    public var idPrefix = ""
+
+    /// Generate the next element id (prefixed by `idPrefix` unless a custom
+    /// provider is injected).
+    func nextID() -> String {
+        if let customIDProvider { return customIDProvider() }
+        idCounter += 1
+        return "\(idPrefix)el-\(idCounter)"
+    }
 
     private enum Interaction {
         case idle
@@ -71,9 +86,8 @@ public final class EditorController {
         seedProvider: (() -> Int)? = nil
     ) {
         store = Store(scene: scene)
-        var idCounter = 0
         var seedCounter = 1
-        nextID = idProvider ?? { idCounter += 1; return "el-\(idCounter)" }
+        customIDProvider = idProvider
         nextSeed = seedProvider ?? { seedCounter += 1; return seedCounter * 100_001 }
     }
 
@@ -345,6 +359,16 @@ public final class EditorController {
     public func load(scene: Scene) {
         store = Store(scene: scene)
         selectedIDs = []
+        interaction = .idle
+    }
+
+    /// Replace the scene's elements (e.g. applying a reconciled collaborative
+    /// update) without recording an undo step. The caller is responsible for any
+    /// reconciliation; this just installs the result and rebases the undo
+    /// baseline. (parity: TS `EditorStore.applyRemote*`)
+    public func applyElements(_ elements: [ExcalidrawElement]) {
+        store.modifyScene { $0.replaceAll(elements) }
+        store.rebase()
         interaction = .idle
     }
 

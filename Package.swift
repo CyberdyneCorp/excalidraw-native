@@ -21,6 +21,7 @@ let package = Package(
         .library(name: "ExcalidrawRender", targets: ["ExcalidrawRender"]),
         .library(name: "ExcalidrawMetal", targets: ["ExcalidrawMetal"]),
         .library(name: "ExcalidrawEditor", targets: ["ExcalidrawEditor"]),
+        .library(name: "ExcalidrawCollab", targets: ["ExcalidrawCollab"]),
         .library(name: "ExcalidrawUI", targets: ["ExcalidrawUI"])
     ],
     targets: [
@@ -61,7 +62,11 @@ let package = Package(
 
         // MARK: UI layer
 
-        .target(name: "ExcalidrawUI", dependencies: ["ExcalidrawRender", "ExcalidrawEditor", "ExcalidrawMetal"]),
+        .target(name: "ExcalidrawCollab", dependencies: ["ExcalidrawModel"]),
+        .target(
+            name: "ExcalidrawUI",
+            dependencies: ["ExcalidrawRender", "ExcalidrawEditor", "ExcalidrawMetal", "ExcalidrawCollab"]
+        ),
 
         // MARK: Tests (one per library)
 
@@ -78,6 +83,7 @@ let package = Package(
         ),
         .testTarget(name: "ExcalidrawMetalTests", dependencies: ["ExcalidrawMetal"]),
         .testTarget(name: "ExcalidrawEditorTests", dependencies: ["ExcalidrawEditor"]),
+        .testTarget(name: "ExcalidrawCollabTests", dependencies: ["ExcalidrawCollab"]),
         .testTarget(name: "ExcalidrawUITests", dependencies: ["ExcalidrawUI"])
     ],
     swiftLanguageModes: [.v5]
