@@ -237,6 +237,18 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     after close), store reconnect-merge regression, a relay-core stale-close
     guard, and an end-to-end integration that drops a live socket and asserts the
     client reconnects + resyncs over the real relay.
+  - **T7 slice 5 (completes T7) — the Swift app collaborates.** The SwiftUI
+    `EditorModel` is now wired to `CollabClient` (`EditorModel+Collab`), parity
+    with the web `EditorStore`: `startCollab`/`stopCollab`, local edits broadcast
+    changed elements (version-diffed via a `revision` `didSet`, no echo), remote
+    batches reconcile by `version`/`versionNonce` and apply without polluting
+    undo, reconnect resync merges room + local (offline edits survive), and the
+    peer roster + cursors are republished for the UI. `EditorController` gained a
+    public `idPrefix` (per-peer id namespacing) + `applyElements`, and `Store`
+    gained `rebase`. 5 `CollabModelTests` mirror the TS `editor-store-collab`
+    suite. **An iPad and a browser now edit the same room live** — cursors,
+    selections, and elements sync both ways, surviving reconnects. **T7 complete;
+    the library is feature-complete with a working collaborative web example.**
   - **Mermaid + tables hardening:** a Playwright pass over the generators
     surfaced and fixed a label bug — container-bound text (Mermaid nodes, table
     cells) rendered **left-aligned** because centring keyed on the stored cell
