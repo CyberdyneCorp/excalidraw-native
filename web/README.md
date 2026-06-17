@@ -17,7 +17,7 @@ web/
 │   ├── render/    @xs/render — Canvas2D renderer, rough.js, SVG/PNG     🟡 T3
 │   ├── editor/    @xs/editor — tools, selection, generators, smart     ✅ T4
 │   ├── svelte/    @xs/svelte — reactive EditorStore + Svelte bridge   🟡 T5
-│   └── protocol/  @xs/protocol — collaboration wire schema               (T7)
+│   └── protocol/  @xs/protocol — collaboration wire schema + reconcile 🟡 T7
 ├── apps/web/      browser app (Vite + Svelte 5)                         🟡 T5
 └── server/        WebSocket relay                                         (T7)
 ```
@@ -183,3 +183,16 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     cross-hatch / solid / zigzag) wired to `setFillStyle`. E2E asserts the moved
     note keeps a tight selection, a line vertex drags, and the pattern change
     lands on the element.
+- **T7 — Collaboration (in progress):** `@xs/protocol` — the language-neutral
+  collaboration contract shared by the web and Swift clients. Defines the
+  versioned WebSocket message schema (`join`/`leave`, `room-state`,
+  `peer-joined`/`peer-left`, `presence`, lossy `pointer`, `element-updates`,
+  `scene-snapshot`, `ping`/`ack`) with a JSON codec that rejects malformed or
+  unknown frames, and the **element reconciliation** rule — Excalidraw's
+  deterministic, symmetric last-writer-wins over `version` / `versionNonce`
+  (higher version wins; ties break on lower nonce), so two clients converge on
+  the same element without a central authority or CRDT. 15 tests (reconcile
+  convergence/symmetry, delete races, batch merge, codec round-trip). Captured
+  as the OpenSpec [`collaboration`](../openspec/specs/collaboration/spec.md)
+  baseline. Still to do: the Node relay `server/`, presence/cursor UI, and the
+  Swift client.

@@ -1,0 +1,21 @@
+{
+  "name": "@xs/protocol",
+  "version": "0.0.0",
+  "description": "Collaboration wire schema + version/versionNonce reconciliation for the WebSocket relay — shared by the web and Swift clients.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@xs/model": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

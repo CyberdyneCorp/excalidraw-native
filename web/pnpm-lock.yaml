@@ -103,6 +103,16 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/protocol:
+    dependencies:
+      '@xs/model':
+        specifier: workspace:*
+        version: link:../model
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/render:
     dependencies:
       '@xs/geometry':
