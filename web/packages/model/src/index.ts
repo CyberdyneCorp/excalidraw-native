@@ -1,0 +1,11 @@
+export * from "./enums.js";
+export * from "./value-types.js";
+export * from "./element.js";
+export { decodeElement, encodeElement } from "./element-codec.js";
+export { canonicalize, canonicalJSON, semanticEqual } from "./json.js";
+export { type ExcalidrawFile, makeFile, decodeFile, encodeFile } from "./file.js";
+export { Scene } from "./scene.js";
+export { type ElementChange, SceneDelta, History, Store } from "./history.js";
+export { restore, fractionalIndexKey } from "./restore.js";
+export { SceneDocument } from "./scene-document.js";
+export { type ExcalidrawLibrary, decodeLibrary, encodeLibrary } from "./library.js";
