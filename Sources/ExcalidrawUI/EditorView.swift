@@ -4,6 +4,11 @@ import ExcalidrawRender
 import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 /// The adaptive single-user editor. The tool/action toolbar sits at the top on
 /// regular widths (iPad) and the bottom on compact widths (iPhone). A footer
@@ -296,8 +301,14 @@ public struct EditorView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 swatches(palette, selected: model.strokeColor, id: "stroke") { model.setStrokeColor($0) }
+                customColorPicker(
+                    current: model.strokeColor, id: "stroke", default: "#1e1e1e"
+                ) { model.setStrokeColor($0) }
                 Divider().frame(height: 24)
                 swatches(fills, selected: model.backgroundColor, id: "bg") { model.setBackgroundColor($0) }
+                customColorPicker(
+                    current: model.backgroundColor, id: "bg", default: "#a5d8ff"
+                ) { model.setBackgroundColor($0) }
                 if model.backgroundColor != "transparent" {
                     fillStyleControl
                 }
@@ -319,6 +330,7 @@ public struct EditorView: View {
                     }
                     .toggleStyle(.button)
                     .accessibilityIdentifier("elbow-toggle")
+                    arrowheadControls
                 }
                 if exported {
                     Text("Exported").foregroundStyle(.secondary).accessibilityIdentifier("exported-confirmation")
@@ -494,6 +506,52 @@ public struct EditorView: View {
         }
     }
 
+    /// Native color picker for arbitrary stroke/background colors. The iOS system
+    /// picker includes a screen **eyedropper**, so this also covers that gap.
+    private func customColorPicker(
+        current: String, id: String, default fallback: String, action: @escaping (String) -> Void
+    ) -> some View {
+        ColorPicker("", selection: Binding(
+            get: { Color(hex: current == "transparent" ? fallback : current) },
+            set: { action($0.hexString) }
+        ), supportsOpacity: false)
+            .labelsHidden()
+            .frame(width: 28)
+            .accessibilityIdentifier("\(id)-color-picker")
+    }
+
+    private let arrowheadOptions: [(Arrowhead?, String)] = [
+        (nil, "None"), (.arrow, "Arrow"), (.triangle, "Triangle"), (.diamond, "Diamond")
+    ]
+
+    /// Start/end arrowhead pickers for the selected/active arrow.
+    private var arrowheadControls: some View {
+        HStack(spacing: 6) {
+            arrowheadMenu(icon: "arrow.left", current: model.startArrowhead, id: "start") {
+                model.setStartArrowhead($0)
+            }
+            arrowheadMenu(icon: "arrow.right", current: model.endArrowhead, id: "end") {
+                model.setEndArrowhead($0)
+            }
+        }
+    }
+
+    private func arrowheadMenu(
+        icon: String, current: Arrowhead?, id: String, action: @escaping (Arrowhead?) -> Void
+    ) -> some View {
+        Menu {
+            ForEach(arrowheadOptions, id: \.1) { head, name in
+                Button { action(head) } label: {
+                    if current == head { Label(name, systemImage: "checkmark") } else { Text(name) }
+                }
+                .accessibilityIdentifier("arrowhead-\(id)-\(name)")
+            }
+        } label: {
+            Image(systemName: icon)
+        }
+        .accessibilityIdentifier("arrowhead-\(id)")
+    }
+
     // MARK: Command palette
 
     private var commandPalette: some View {
@@ -598,5 +656,21 @@ extension Color {
         let g = Double((value >> 8) & 0xFF) / 255
         let b = Double(value & 0xFF) / 255
         self.init(red: r, green: g, blue: b)
+    }
+
+    /// `#rrggbb` for the custom color picker → model string.
+    var hexString: String {
+        #if canImport(UIKit)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return String(format: "#%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
+        #else
+            let resolved = NSColor(self).usingColorSpace(.sRGB) ?? NSColor(self)
+            return String(
+                format: "#%02x%02x%02x",
+                Int(resolved.redComponent * 255), Int(resolved.greenComponent * 255),
+                Int(resolved.blueComponent * 255)
+            )
+        #endif
     }
 }

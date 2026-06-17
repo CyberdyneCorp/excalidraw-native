@@ -691,7 +691,7 @@ public final class EditorModel: ObservableObject {
     }
 
     /// Apply a style change to the current selection as one undo step.
-    private func applyToSelection(_ change: (inout ExcalidrawElement) -> Void) {
+    func applyToSelection(_ change: (inout ExcalidrawElement) -> Void) {
         controller.updateSelected(change)
         revision += 1
     }
