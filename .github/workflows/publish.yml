@@ -1,0 +1,51 @@
+name: Publish web packages
+
+# Publishes the web npm packages to GitHub Packages when a version tag is pushed
+# (e.g. `git tag 0.3.0 && git push origin 0.3.0`). The Swift package needs no
+# publish step — SwiftPM resolves the git tag directly.
+#
+# Auth: the packages are scoped @cyberdynecorp (the CyberdyneCorp org), but this
+# repo is under a personal account, so the automatic GITHUB_TOKEN cannot publish
+# them. Add a repo secret CYBERDYNE_NPM_TOKEN = a PAT with `write:packages` for
+# the CyberdyneCorp org (the same token used to publish manually).
+
+on:
+  push:
+    tags:
+      - "*.*.*" # e.g. 0.3.0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@cyberdynecorp"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:libs
+      # Gate the release on a green build before anything is published.
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Verify the git tag matches the package versions
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          for pkg in packages/excalidraw-svelte server; do
+            v=$(node -p "require('./$pkg/package.json').version")
+            if [ "$tag" != "$v" ]; then
+              echo "::error::tag $tag does not match $pkg version $v"; exit 1
+            fi
+          done
+      - run: pnpm publish:libs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.CYBERDYNE_NPM_TOKEN }}
