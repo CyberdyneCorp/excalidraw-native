@@ -1,0 +1,42 @@
+{
+  "name": "@cyberdynecorp/excalidraw-yjs",
+  "version": "0.2.0",
+  "description": "Optional Yjs/CRDT collaboration adapter for @cyberdynecorp/excalidraw-svelte — two-way binds an EditorStore to a Y.Doc for field-level merge and the Yjs provider ecosystem (y-websocket, Hocuspocus, Liveblocks, custom). The element-LWW core stays canonical.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "@cyberdynecorp/excalidraw-svelte": ">=0.2.0",
+    "yjs": "^13.6.0"
+  },
+  "devDependencies": {
+    "@cyberdynecorp/excalidraw-svelte": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "yjs": "^13.6.0"
+  },
+  "license": "MIT",
+  "author": "Cyberdyne Corp AI",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leonardoaraujosantos/excalidraw-swift-web.git",
+    "directory": "web/packages/excalidraw-yjs"
+  },
+  "homepage": "https://github.com/leonardoaraujosantos/excalidraw-swift-web#readme",
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

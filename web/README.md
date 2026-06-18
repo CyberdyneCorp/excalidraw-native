@@ -53,6 +53,17 @@ store.startCollab(reconnectingSocket(() => browserSocket("wss://relay.example/ws
 
 The `apps/web` demo app is **not** published.
 
+## Collaboration backends
+
+Two interchangeable web collaboration backends; the element-LWW engine is canonical.
+
+| Backend | Package | Engine | Use when |
+| --- | --- | --- | --- |
+| Native relay | `@cyberdynecorp/excalidraw-relay` | element-LWW (`version`/`versionNonce`), shared byte-identically with the Swift twin | iPad ↔ browser parity, our small Node relay |
+| Yjs adapter | `@cyberdynecorp/excalidraw-yjs` | Yjs CRDT (field-level merge) | you already run Yjs infra (y-websocket, Hocuspocus, custom gateway) or need same-element field merge — **web-only** |
+
+The Yjs adapter is **optional and additive**: a parallel engine that bypasses `reconcileElements` (Yjs merges), so the canonical core takes no `yjs` dependency. A Yjs-synced scene still round-trips `.excalidraw` and interoperates with the LWW engine. See [`packages/excalidraw-yjs/README.md`](packages/excalidraw-yjs/README.md) and the [`collaboration-yjs`](../openspec/specs/collaboration-yjs/spec.md) spec for the mapping invariants and v1 limitations (atomic point/group arrays; web-only).
+
 ### Publishing (maintainers)
 
 Each package's `publishConfig.registry` points at `https://npm.pkg.github.com`. Authenticate with a GitHub token that has **`write:packages`** for the `CyberdyneCorp` org (the repo's `~/.npmrc` already routes `@cyberdynecorp` there via `${NPM_GITHUB_TOKEN}`):
