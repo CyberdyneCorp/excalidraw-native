@@ -85,6 +85,9 @@ export class EditorStore {
   collab: CollabSession | null = null;
   /** Per-element version last broadcast, to send only what changed (and avoid echo). */
   private lastBroadcast = new Map<string, number>();
+  /** Listeners notified after each local edit — used by external collaboration
+   * adapters (e.g. the optional Yjs/CRDT adapter) to mirror edits to a `Y.Doc`. */
+  private changeListeners = new Set<() => void>();
 
   constructor(scene: Scene = new Scene(), viewport: Viewport = new Viewport()) {
     this.controller = new EditorController(scene);
@@ -95,6 +98,7 @@ export class EditorStore {
   private bump(): void {
     this.revision += 1;
     this.broadcastLocalChanges();
+    for (const listener of this.changeListeners) listener();
   }
 
   get scene(): Scene {
@@ -530,6 +534,30 @@ export class EditorStore {
   stopCollab(): void {
     this.collab?.leave();
     this.collab = null;
+  }
+
+  /**
+   * Subscribe to local edits — invoked after every mutation that bumps
+   * `revision`. Returns an unsubscribe function. External collaboration adapters
+   * (e.g. `@cyberdynecorp/excalidraw-yjs`) use this to mirror local edits into a
+   * `Y.Doc`. Applying external elements via {@link applyExternalElements} does
+   * **not** fire these listeners, so an adapter won't echo its own writes.
+   */
+  onChange(listener: () => void): () => void {
+    this.changeListeners.add(listener);
+    return () => this.changeListeners.delete(listener);
+  }
+
+  /**
+   * Replace the scene with elements merged by an external engine (e.g. a CRDT
+   * adapter), without creating an undo step, without broadcasting on the LWW
+   * collab transport, and without firing {@link onChange} (so it doesn't echo
+   * back to the source). Bumps `revision` so the canvas redraws.
+   */
+  applyExternalElements(elements: ExcalidrawElement[]): void {
+    this.controller.store.modifyScene((scene) => scene.replaceAll(elements));
+    this.controller.store.rebase();
+    this.revision += 1;
   }
 
   /** Remote peers' live cursors/selection, for presence rendering. */
