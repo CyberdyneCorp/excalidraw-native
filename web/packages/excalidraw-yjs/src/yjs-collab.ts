@@ -63,6 +63,7 @@ const AWARENESS_KEY = "excalidraw";
 export class YjsCollab {
   private readonly yElements: YElements;
   private unsubscribeStore: (() => void) | null = null;
+  private unsubscribeCursor: (() => void) | null = null;
   private docObserver: (() => void) | null = null;
   private awarenessObserver: (() => void) | null = null;
   /** Guards against the doc→editor apply re-triggering an editor→doc flush. */
@@ -111,10 +112,13 @@ export class YjsCollab {
     this.started = false;
     this.unsubscribeStore?.();
     this.unsubscribeStore = null;
+    this.unsubscribeCursor?.();
+    this.unsubscribeCursor = null;
     this.docObserver?.();
     this.docObserver = null;
     this.awarenessObserver?.();
     this.awarenessObserver = null;
+    this.store.externalCursors = [];
     this.options.awareness?.setLocalState(null);
   }
 
@@ -142,9 +146,25 @@ export class YjsCollab {
   private startAwareness(): void {
     const { awareness, peer } = this.options;
     if (awareness === undefined || peer === undefined) return;
-    const handler = (): void => this.options.onPresence?.(this.remotePresences());
+    const handler = (): void => {
+      const presences = this.remotePresences();
+      // Feed remote cursors into the editor overlay (visual parity with the LWW
+      // session, which renders cursors from `store.remoteCursors`).
+      this.store.externalCursors = presences
+        .filter((p) => p.pointer !== null)
+        .map((p) => ({
+          color: p.peer.color,
+          name: p.peer.name,
+          x: (p.pointer as { x: number; y: number }).x,
+          y: (p.pointer as { x: number; y: number }).y,
+        }));
+      this.store.revision += 1; // redraw the overlay
+      this.options.onPresence?.(presences);
+    };
     awareness.on("change", handler);
     this.awarenessObserver = () => awareness.off("change", handler);
+    // Publish the local cursor as it moves (Canvas calls store.trackPointer).
+    this.unsubscribeCursor = this.store.onCursorMove((scene) => this.setCursor(scene));
     this.publishSelection();
   }
 

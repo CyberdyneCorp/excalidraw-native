@@ -182,4 +182,33 @@ describe("YjsCollab — presence via Yjs awareness", () => {
     expect(remotes.map((p) => p.peer.id)).toEqual(["u2"]);
     expect(reported).toBeGreaterThan(0);
   });
+
+  it("feeds remote cursors into the editor overlay (externalCursors)", () => {
+    const store = new EditorStore();
+    const doc = new Y.Doc();
+    const awareness = new FakeAwareness(1);
+    new YjsCollab(store, doc, { awareness, peer }).start();
+
+    awareness.injectRemote(2, {
+      excalidraw: {
+        peer: { id: "u2", name: "Two", color: "#ff0000" },
+        pointer: { x: 5, y: 9 },
+        selectedIds: [],
+        tool: "selection",
+      },
+    });
+
+    expect(store.externalCursors).toEqual([{ color: "#ff0000", name: "Two", x: 5, y: 9 }]);
+  });
+
+  it("publishes the local cursor through the editor's trackPointer hook", () => {
+    const store = new EditorStore();
+    const doc = new Y.Doc();
+    const awareness = new FakeAwareness(1);
+    new YjsCollab(store, doc, { awareness, peer }).start();
+
+    store.trackPointer(new Point(12, 34)); // Canvas calls this on pointer move
+    const mine = awareness.getStates().get(1)?.excalidraw as { pointer: { x: number; y: number } };
+    expect(mine.pointer).toEqual({ x: 12, y: 34 }); // identity viewport at default zoom/scroll
+  });
 });

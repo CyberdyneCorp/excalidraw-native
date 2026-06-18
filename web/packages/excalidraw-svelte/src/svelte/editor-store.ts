@@ -88,6 +88,12 @@ export class EditorStore {
   /** Listeners notified after each local edit — used by external collaboration
    * adapters (e.g. the optional Yjs/CRDT adapter) to mirror edits to a `Y.Doc`. */
   private changeListeners = new Set<() => void>();
+  /** Listeners notified of local cursor moves (scene coords) — external presence
+   * adapters publish these as their own cursor. */
+  private cursorListeners = new Set<(scene: Point) => void>();
+  /** Remote cursors supplied by an external presence source (e.g. the Yjs
+   * awareness bridge); merged with the LWW `remoteCursors` when rendering. */
+  externalCursors: { color: string; name: string; x: number; y: number }[] = [];
 
   constructor(scene: Scene = new Scene(), viewport: Viewport = new Viewport()) {
     this.controller = new EditorController(scene);
@@ -170,11 +176,12 @@ export class EditorStore {
     }
   }
 
-  /** Broadcast the cursor without a click — for hover/move tracking from the UI. */
+  /** Broadcast the cursor without a click — for hover/move tracking from the UI.
+   * Notifies both the LWW session and any external presence adapter. */
   trackPointer(viewPoint: Point): void {
-    if (this.collab === null) return;
     const p = this.viewport.viewToScene(viewPoint);
-    this.collab.sendPointer({ x: p.x, y: p.y });
+    for (const listener of this.cursorListeners) listener(p);
+    if (this.collab !== null) this.collab.sendPointer({ x: p.x, y: p.y });
   }
 
   // MARK: Viewport
@@ -549,6 +556,16 @@ export class EditorStore {
   }
 
   /**
+   * Subscribe to local cursor moves (scene coordinates), fired from
+   * {@link trackPointer}. External presence adapters publish these as the local
+   * peer's cursor. Returns an unsubscribe function.
+   */
+  onCursorMove(listener: (scene: Point) => void): () => void {
+    this.cursorListeners.add(listener);
+    return () => this.cursorListeners.delete(listener);
+  }
+
+  /**
    * Replace the scene with elements merged by an external engine (e.g. a CRDT
    * adapter), without creating an undo step, without broadcasting on the LWW
    * collab transport, and without firing {@link onChange} (so it doesn't echo
@@ -684,14 +701,17 @@ export class EditorStore {
       now,
       laserDots: this.trail.visibleLaser(now),
       eraserDots: this.trail.visibleEraser(now),
-      remoteCursors: this.remoteCursors
-        .filter((rc) => rc.pointer !== null)
-        .map((rc) => ({
-          color: rc.peer.color,
-          name: rc.peer.name,
-          x: rc.pointer!.x,
-          y: rc.pointer!.y,
-        })),
+      remoteCursors: [
+        ...this.remoteCursors
+          .filter((rc) => rc.pointer !== null)
+          .map((rc) => ({
+            color: rc.peer.color,
+            name: rc.peer.name,
+            x: rc.pointer!.x,
+            y: rc.pointer!.y,
+          })),
+        ...this.externalCursors,
+      ],
     });
   }
 

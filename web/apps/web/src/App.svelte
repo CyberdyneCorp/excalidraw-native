@@ -2,7 +2,8 @@
   import type { Tool } from "@cyberdynecorp/excalidraw-svelte/editor";
   import type { FillStyle } from "@cyberdynecorp/excalidraw-svelte/model";
   import { EditorStore, browserSocket, reconnectingSocket } from "@cyberdynecorp/excalidraw-svelte";
-  import { YjsCollab } from "@cyberdynecorp/excalidraw-yjs";
+  import { YjsCollab, type AwarenessLike } from "@cyberdynecorp/excalidraw-yjs";
+  import { Awareness } from "y-protocols/awareness";
   import * as Y from "yjs";
   import Canvas from "./lib/Canvas.svelte";
   import { BroadcastChannelProvider } from "./lib/yjs-broadcast-provider";
@@ -29,11 +30,21 @@
   // provider; the adapter itself works with any provider). Exposed for E2E tests.
   const yjsRoom = params.get("yjs");
   if (yjsRoom !== null) {
+    const palette = ["#e64980", "#4263eb", "#0ca678", "#f08c00", "#ae3ec9"];
+    const peer = {
+      id: `web-${Math.random().toString(36).slice(2, 8)}`,
+      name: params.get("name") ?? "Guest",
+      color: palette[Math.floor(Math.random() * palette.length)]!,
+    };
     const ydoc = new Y.Doc();
-    const provider = new BroadcastChannelProvider(ydoc, yjsRoom);
-    const collab = new YjsCollab(store, ydoc);
+    const awareness = new Awareness(ydoc);
+    const provider = new BroadcastChannelProvider(ydoc, yjsRoom, awareness);
+    const collab = new YjsCollab(store, ydoc, {
+      awareness: awareness as unknown as AwarenessLike,
+      peer,
+    });
     collab.start();
-    (window as unknown as { __yjs?: unknown }).__yjs = { doc: ydoc, collab, provider };
+    (window as unknown as { __yjs?: unknown }).__yjs = { doc: ydoc, collab, provider, awareness };
   }
   // The store is plain TS, so its reads aren't reactive on their own. Poll the
   // revision counter and expose store-derived UI state through `view`, which

@@ -59,6 +59,32 @@ test("two browsers in one Yjs room converge — CRDT, no relay", async ({ browse
   await context.close();
 });
 
+test("remote cursors propagate via Yjs awareness", async ({ browser }) => {
+  const context = await browser.newContext();
+  const alice = await context.newPage();
+  const bob = await context.newPage();
+  await joinYjs(alice, "e2e-yjs-presence", "Alice");
+  await joinYjs(bob, "e2e-yjs-presence", "Bob");
+
+  // Alice moves her cursor over the canvas → trackPointer → Yjs awareness.
+  const box = await alice.getByTestId("canvas").boundingBox();
+  if (box === null) throw new Error("canvas not found");
+  await alice.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.4);
+  await alice.mouse.move(box.x + box.width * 0.45, box.y + box.height * 0.45);
+
+  // Bob sees Alice's presence (with a cursor) and an overlay cursor for her.
+  await bob.waitForFunction(() => {
+    const collab = (window as unknown as { __yjs?: { collab: { remotePresences(): { peer: { name: string }; pointer: unknown }[] } } }).__yjs?.collab;
+    return (collab?.remotePresences() ?? []).some((p) => p.peer.name === "Alice" && p.pointer !== null);
+  });
+  await bob.waitForFunction(() => {
+    const store = (window as unknown as { __store?: { externalCursors: unknown[] } }).__store;
+    return (store?.externalCursors.length ?? 0) > 0;
+  });
+
+  await context.close();
+});
+
 test("a Yjs-synced scene round-trips .excalidraw into the LWW/solo editor", async ({ browser }) => {
   const context = await browser.newContext();
   const yjsPage = await context.newPage();

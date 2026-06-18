@@ -56,6 +56,10 @@ new YjsCollab(store, ydoc, { elementsKey: "excalidraw" });
 
 Any provider that exposes a `Y.Doc` (and optionally an `awareness`) works — including a **custom WebSocket gateway** (the adapter is provider-agnostic; it only touches the `Y.Doc`).
 
+### Live presence
+
+Pass an `awareness` + `peer` and the adapter publishes this client's selection/tool (and cursor, via the editor's pointer hook) to Yjs awareness, and feeds remote peers' cursors into the editor overlay (`store.externalCursors`) — visual parity with the native relay's cursors. The demo app's `?yjs=<room>` mode wires this end-to-end over `BroadcastChannelProvider` as a working reference.
+
 ## Mapping (v1)
 
 - The scene is a top-level `Y.Map` keyed by element id; each value is a per-element `Y.Map` of that element's fields — so **different fields of the same element merge** (the headline win over LWW).
