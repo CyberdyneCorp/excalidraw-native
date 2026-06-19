@@ -17,9 +17,34 @@ public enum Restore {
     }
 
     static func restoreElements(_ elements: [ExcalidrawElement]) -> [ExcalidrawElement] {
-        var result = elements
+        var result = dedupeIDs(elements)
         assignMissingIndices(&result)
         return result
+    }
+
+    /// Heal duplicate element ids in a loaded document. A scene corrupted before
+    /// the id-collision fix can contain two elements sharing one id; the scene
+    /// index then maps that id to only one of them, leaving the other
+    /// un-selectable and un-deletable. Keep the first occurrence's id and mint a
+    /// fresh unique id for each later twin so every element becomes addressable.
+    static func dedupeIDs(_ elements: [ExcalidrawElement]) -> [ExcalidrawElement] {
+        var used = Set<String>()
+        return elements.map { element in
+            if !used.contains(element.base.id) {
+                used.insert(element.base.id)
+                return element
+            }
+            var n = 2
+            var id = "\(element.base.id)-\(n)"
+            while used.contains(id) {
+                n += 1
+                id = "\(element.base.id)-\(n)"
+            }
+            used.insert(id)
+            var copy = element
+            copy.base.id = id
+            return copy
+        }
     }
 
     /// Ensure every element carries a fractional `index`. Existing indices are

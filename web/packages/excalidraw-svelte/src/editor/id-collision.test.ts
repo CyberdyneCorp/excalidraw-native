@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Point } from "../math/index.js";
-import { type ExcalidrawElement, Scene, defaultBase } from "../model/index.js";
+import { type ExcalidrawElement, Scene, defaultBase, makeFile, restore } from "../model/index.js";
 import { EditorController } from "./controller.js";
 import { pointerEvent } from "./pointer-event.js";
 
@@ -35,5 +35,15 @@ describe("element id collisions", () => {
     const scene = new Scene([rect("a")]);
     scene.add({ ...rect("a", 999) }); // same id, different position
     expect(scene.elements.filter((e) => e.id === "a")).toHaveLength(1);
+  });
+
+  it("restore heals a corrupted saved scene with duplicate ids (all stay deletable)", () => {
+    // A document saved before the fix: two elements share id "el-1".
+    const file = makeFile({ elements: [rect("el-1"), { ...rect("el-1"), x: 100 }, rect("el-2")] });
+    const restored = restore(file);
+    const ids = restored.elements.map((e) => e.id);
+    expect(restored.elements).toHaveLength(3); // none dropped
+    expect(new Set(ids).size).toBe(3); // all ids unique → all addressable/deletable
+    expect(ids[0]).toBe("el-1"); // first occurrence keeps its id
   });
 });
