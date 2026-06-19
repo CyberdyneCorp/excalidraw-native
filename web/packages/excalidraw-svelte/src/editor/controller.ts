@@ -97,6 +97,9 @@ export class EditorController {
   private interaction: Interaction = { kind: "idle" };
   private readonly nextID: () => string;
   private readonly nextSeed: () => number;
+  /** Monotonic counter behind the default `el-N` id generator, seeded past any
+   * ids already in the scene (a loaded document / autosave / sample). */
+  private idCounter = 0;
   /**
    * Prefix for generated element ids. Set to a per-client value (e.g. the peer
    * id) during collaboration so two clients never mint colliding ids — a
@@ -107,10 +110,26 @@ export class EditorController {
 
   constructor(scene: Scene = new Scene(), idProvider?: () => string, seedProvider?: () => number) {
     this.store = new Store(scene);
-    let idCounter = 0;
     let seedCounter = 1;
-    this.nextID = idProvider ?? (() => `${this.idPrefix}el-${++idCounter}`);
+    // Seed past any `el-N` ids already in the scene: a loaded document / autosave
+    // / sample uses the same scheme, so a counter restarting at el-1 collides —
+    // producing two elements with one id (phantom copy on move, un-deletable,
+    // oversized selection).
+    this.idCounter = EditorController.maxElNumber(scene, this.idPrefix);
+    this.nextID = idProvider ?? (() => `${this.idPrefix}el-${++this.idCounter}`);
     this.nextSeed = seedProvider ?? (() => ++seedCounter * 100_001);
+  }
+
+  /** Highest `<prefix>el-N` number present in `scene` (0 if none). */
+  private static maxElNumber(scene: Scene, prefix: string): number {
+    const token = `${prefix}el-`;
+    let max = 0;
+    for (const el of scene.elements) {
+      if (!el.id.startsWith(token)) continue;
+      const n = Number.parseInt(el.id.slice(token.length), 10);
+      if (Number.isInteger(n)) max = Math.max(max, n);
+    }
+    return max;
   }
 
   get scene(): Scene {
@@ -282,6 +301,7 @@ export class EditorController {
 
   load(scene: Scene): void {
     this.store = new Store(scene);
+    this.idCounter = Math.max(this.idCounter, EditorController.maxElNumber(scene, this.idPrefix));
     this.selectedIDs = new Set();
     this.interaction = { kind: "idle" };
   }

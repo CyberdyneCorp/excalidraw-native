@@ -66,6 +66,20 @@ public final class EditorController {
         return "\(idPrefix)el-\(idCounter)"
     }
 
+    /// Highest `<prefix>el-N` number already present in `scene`, so `idCounter`
+    /// can be seeded past it. A loaded document / autosave / bundled sample uses
+    /// the same `el-N` scheme, so without seeding the counter restarts at el-1
+    /// and collides — producing two elements with one id (a phantom copy on
+    /// move, un-deletable, oversized selection).
+    static func maxElementNumber(in scene: Scene, prefix: String) -> Int {
+        let token = "\(prefix)el-"
+        var maxN = 0
+        for element in scene.elements where element.id.hasPrefix(token) {
+            if let n = Int(element.id.dropFirst(token.count)) { maxN = max(maxN, n) }
+        }
+        return maxN
+    }
+
     private enum Interaction {
         case idle
         case creating(id: String, origin: Point, moved: Bool)
@@ -89,6 +103,7 @@ public final class EditorController {
         var seedCounter = 1
         customIDProvider = idProvider
         nextSeed = seedProvider ?? { seedCounter += 1; return seedCounter * 100_001 }
+        idCounter = Self.maxElementNumber(in: scene, prefix: idPrefix)
     }
 
     public var scene: Scene {
@@ -358,6 +373,7 @@ public final class EditorController {
     /// Replace the document with a freshly loaded scene (resets history/selection).
     public func load(scene: Scene) {
         store = Store(scene: scene)
+        idCounter = max(idCounter, Self.maxElementNumber(in: scene, prefix: idPrefix))
         selectedIDs = []
         interaction = .idle
     }
