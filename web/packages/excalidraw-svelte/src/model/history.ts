@@ -141,8 +141,7 @@ export class Store {
     if (raw.isEmpty) return;
     for (const [id, change] of raw.changes) {
       if (change.after === null) continue; // removals: nothing to bump
-      const alreadyBumped =
-        change.before !== null && change.before.version < change.after.version;
+      const alreadyBumped = change.before !== null && change.before.version < change.after.version;
       if (!alreadyBumped) {
         this.scene.mutate(id, () => {}, { versionNonce: Math.floor(Math.random() * 0x7fffffff) });
       }
