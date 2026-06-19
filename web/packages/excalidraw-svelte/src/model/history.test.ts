@@ -126,7 +126,11 @@ describe("Store.commit seals live edits for collaboration (regression)", () => {
   it("does not double-bump a discrete mutate edit", () => {
     const store = new Store(new Scene([rect("a", 0)]));
     const v0 = store.scene.element("a")!.version;
-    store.transaction((s) => s.mutate("a", (el) => (el.x = 100)));
+    store.transaction((s) =>
+      s.mutate("a", (el) => {
+        el.x = 100;
+      }),
+    );
     expect(store.scene.element("a")!.version).toBe(v0 + 1); // exactly one bump
   });
 });

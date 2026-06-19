@@ -48,6 +48,18 @@ final class StickyNoteTests: XCTestCase {
         XCTAssertEqual(props.text, "")
     }
 
+    func testDeletingNoteRemovesBoundText() {
+        let ec = EditorController()
+        _ = ec.createStickyNote(at: Point(20, 20)) // selects only the container
+        XCTAssertEqual(ec.scene.visibleElements.count, 2) // container + bound text
+
+        ec.deleteSelected()
+
+        // Regression: previously only the selected container was removed, leaving
+        // the bound text floating on screen with no way to select/delete it.
+        XCTAssertEqual(ec.scene.visibleElements.count, 0)
+    }
+
     func testMovingNoteKeepsTextGrouped() {
         let ec = EditorController()
         let note = ec.createStickyNote(at: Point(0, 0))

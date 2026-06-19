@@ -21,8 +21,33 @@ function assignMissingIndices(elements: ExcalidrawElement[]): ExcalidrawElement[
   );
 }
 
+/**
+ * Heal duplicate element ids in a loaded document. A scene corrupted before the
+ * id-collision fix can contain two elements sharing one id; the scene index then
+ * maps that id to only one of them, leaving the other un-selectable and
+ * un-deletable. Keep the first occurrence's id and mint a fresh unique id for
+ * each later twin so every element becomes addressable again.
+ */
+function dedupeIds(elements: ExcalidrawElement[]): ExcalidrawElement[] {
+  const used = new Set<string>();
+  return elements.map((el) => {
+    if (!used.has(el.id)) {
+      used.add(el.id);
+      return el;
+    }
+    let n = 2;
+    let id = `${el.id}-${n}`;
+    while (used.has(id)) {
+      n += 1;
+      id = `${el.id}-${n}`;
+    }
+    used.add(id);
+    return { ...el, id };
+  });
+}
+
 function restoreElements(elements: ExcalidrawElement[]): ExcalidrawElement[] {
-  return assignMissingIndices(elements);
+  return assignMissingIndices(dedupeIds(elements));
 }
 
 /**

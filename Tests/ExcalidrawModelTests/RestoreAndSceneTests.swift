@@ -23,6 +23,20 @@ final class RestoreAndSceneTests: XCTestCase {
         XCTAssertEqual(indices.compactMap(\.self), sorted)
     }
 
+    func testRestoreHealsDuplicateIDs() {
+        // A scene corrupted before the id-collision fix: two elements share "a".
+        let file = ExcalidrawFile(elements: [
+            element("a", index: "a0"),
+            element("a", index: "a1"),
+            element("b", index: "a2")
+        ])
+        let restored = Restore.restore(file)
+        let ids = restored.elements.map(\.base.id)
+        XCTAssertEqual(restored.elements.count, 3) // none dropped
+        XCTAssertEqual(Set(ids).count, 3) // all ids now unique → all deletable
+        XCTAssertEqual(ids.first, "a") // first occurrence keeps its id
+    }
+
     func testRestorePreservesExistingIndices() {
         let file = ExcalidrawFile(elements: [element("a", index: "a0"), element("b", index: nil)])
         let restored = Restore.restore(file)

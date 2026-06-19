@@ -27,6 +27,7 @@ import {
   type BaseProperties,
   type BinaryFileData,
   type ExcalidrawElement,
+  type FixedPointBinding,
   type FixedSegment,
   type ImageCrop,
   type JSONValue,
@@ -96,6 +97,9 @@ export class EditorController {
   private interaction: Interaction = { kind: "idle" };
   private readonly nextID: () => string;
   private readonly nextSeed: () => number;
+  /** Monotonic counter behind the default `el-N` id generator, seeded past any
+   * ids already in the scene (a loaded document / autosave / sample). */
+  private idCounter = 0;
   /**
    * Prefix for generated element ids. Set to a per-client value (e.g. the peer
    * id) during collaboration so two clients never mint colliding ids — a
@@ -106,10 +110,26 @@ export class EditorController {
 
   constructor(scene: Scene = new Scene(), idProvider?: () => string, seedProvider?: () => number) {
     this.store = new Store(scene);
-    let idCounter = 0;
     let seedCounter = 1;
-    this.nextID = idProvider ?? (() => `${this.idPrefix}el-${++idCounter}`);
+    // Seed past any `el-N` ids already in the scene: a loaded document / autosave
+    // / sample uses the same scheme, so a counter restarting at el-1 collides —
+    // producing two elements with one id (phantom copy on move, un-deletable,
+    // oversized selection).
+    this.idCounter = EditorController.maxElNumber(scene, this.idPrefix);
+    this.nextID = idProvider ?? (() => `${this.idPrefix}el-${++this.idCounter}`);
     this.nextSeed = seedProvider ?? (() => ++seedCounter * 100_001);
+  }
+
+  /** Highest `<prefix>el-N` number present in `scene` (0 if none). */
+  private static maxElNumber(scene: Scene, prefix: string): number {
+    const token = `${prefix}el-`;
+    let max = 0;
+    for (const el of scene.elements) {
+      if (!el.id.startsWith(token)) continue;
+      const n = Number.parseInt(el.id.slice(token.length), 10);
+      if (Number.isInteger(n)) max = Math.max(max, n);
+    }
+    return max;
   }
 
   get scene(): Scene {
@@ -153,7 +173,7 @@ export class EditorController {
     if (this.editingLinearID !== null && this.handleLinearEditDown(e)) return;
     if (this.activeTool === "eraser") {
       this.interaction = { kind: "erasing" };
-      this.eraseAt(e.scenePoint);
+      this.eraseAt(e.scenePoint, e.type);
       return;
     }
     if (this.activeTool === "hand") return;
@@ -185,7 +205,7 @@ export class EditorController {
         this.moveLinearPoint(i.id, i.index, e.scenePoint);
         break;
       case "erasing":
-        this.eraseAt(e.scenePoint);
+        this.eraseAt(e.scenePoint, e.type);
         break;
       case "moving": {
         let dx = e.scenePoint.x - i.origin.x;
@@ -281,6 +301,7 @@ export class EditorController {
 
   load(scene: Scene): void {
     this.store = new Store(scene);
+    this.idCounter = Math.max(this.idCounter, EditorController.maxElNumber(scene, this.idPrefix));
     this.selectedIDs = new Set();
     this.interaction = { kind: "idle" };
   }
@@ -492,10 +513,48 @@ export class EditorController {
 
   deleteSelected(): void {
     if (this.selectedIDs.size === 0) return;
+    const removed = this.withBoundText(this.selectedIDs);
     this.store.transaction((scene) => {
-      for (const id of this.selectedIDs) scene.remove(id);
+      for (const id of removed) scene.remove(id);
+      EditorController.dropDanglingRefs(scene, removed);
     });
     this.selectedIDs = new Set();
+  }
+
+  /** A selection expanded to include the bound text of every selected container,
+   * so deleting a labeled shape / sticky note / table cell removes its label too
+   * instead of orphaning it on screen. */
+  private withBoundText(ids: Set<string>): Set<string> {
+    const out = new Set<string>(ids);
+    for (const id of ids) {
+      const el = this.scene.element(id);
+      for (const b of el?.boundElements ?? []) {
+        if (b.type === "text") out.add(b.id);
+      }
+    }
+    return out;
+  }
+
+  /** Strip references to `removed` ids from surviving elements — bound-element
+   * lists and arrow start/end bindings — so nothing points at a deleted element. */
+  private static dropDanglingRefs(scene: Scene, removed: Set<string>): void {
+    for (const el of scene.visibleElements) {
+      let next = el;
+      if (el.boundElements?.some((b) => removed.has(b.id))) {
+        next = { ...next, boundElements: el.boundElements.filter((b) => !removed.has(b.id)) };
+      }
+      const b = next as {
+        startBinding?: FixedPointBinding | null;
+        endBinding?: FixedPointBinding | null;
+      };
+      if (b.startBinding && removed.has(b.startBinding.elementId)) {
+        next = { ...next, startBinding: null } as ExcalidrawElement;
+      }
+      if (b.endBinding && removed.has(b.endBinding.elementId)) {
+        next = { ...next, endBinding: null } as ExcalidrawElement;
+      }
+      if (next !== el) scene.replace(next);
+    }
   }
 
   /** Apply a change to every selected element as one undo step. */
@@ -831,8 +890,8 @@ export class EditorController {
     return [dx + offsetX, dy + offsetY];
   }
 
-  private eraseAt(point: Point): void {
-    const threshold = this.handleHitRadius("mouse");
+  private eraseAt(point: Point, type: PointerType): void {
+    const threshold = this.handleHitRadius(type);
     const hits = this.scene.visibleElements.filter((el) => !el.locked && hit(el, point, threshold));
     if (hits.length === 0) return;
     this.store.modifyScene((scene) => {

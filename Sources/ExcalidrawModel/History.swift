@@ -144,7 +144,7 @@ public struct Store: Sendable {
             // have broadcast at an intermediate, mid-drag size.
             let alreadyBumped = change.before.map { $0.base.version < after.base.version } ?? false
             if !alreadyBumped {
-                scene.mutate(id: id, versionNonce: Int.random(in: 0 ... 0x7fff_ffff)) { _ in }
+                scene.mutate(id: id, versionNonce: Int.random(in: 0 ... 0x7FFF_FFFF)) { _ in }
             }
         }
         history.record(SceneDelta.between(snapshot, scene.elements))

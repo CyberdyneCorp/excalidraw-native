@@ -40,6 +40,13 @@ public struct Scene: Equatable, Sendable {
     }
 
     public mutating func add(_ element: ExcalidrawElement) {
+        // Never create a second entry for an existing id — a duplicate would
+        // render twice and make selection/delete/move treat one as a phantom
+        // copy. Replace in place if the id is already present.
+        if let existing = indexByID[element.id] {
+            elements[existing] = element
+            return
+        }
         indexByID[element.id] = elements.count
         elements.append(element)
     }

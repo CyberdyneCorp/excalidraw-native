@@ -82,25 +82,25 @@ final class HistoryTests: XCTestCase {
     // Regression: a drag-created/resized shape updated geometry via `replace`
     // (no version bump), so it kept its zero-size creation version and never
     // re-broadcast — peers saw width=0/height=0. commit() must seal it.
-    func testCommitBumpsVersionOnLiveReplacedElement() {
+    func testCommitBumpsVersionOnLiveReplacedElement() throws {
         var store = Store(scene: Scene(elements: [rect("a")]))
-        let v0 = store.scene.element(id: "a")!.base.version
+        let v0 = try XCTUnwrap(store.scene.element(id: "a")?.base.version)
         store.modifyScene { scene in
             var e = scene.element(id: "a")!
             e.base.width = 120
             e.base.height = 80
             _ = scene.replace(e)
         }
-        XCTAssertEqual(store.scene.element(id: "a")!.base.version, v0) // replace doesn't bump
+        XCTAssertEqual(store.scene.element(id: "a")?.base.version, v0) // replace doesn't bump
         store.commit()
-        XCTAssertEqual(store.scene.element(id: "a")!.base.width, 120)
-        XCTAssertGreaterThan(store.scene.element(id: "a")!.base.version, v0) // sealed
+        XCTAssertEqual(store.scene.element(id: "a")?.base.width, 120)
+        XCTAssertGreaterThan(try XCTUnwrap(store.scene.element(id: "a")?.base.version), v0) // sealed
     }
 
-    func testCommitDoesNotDoubleBumpDiscreteEdit() {
+    func testCommitDoesNotDoubleBumpDiscreteEdit() throws {
         var store = Store(scene: Scene(elements: [rect("a", x: 0)]))
-        let v0 = store.scene.element(id: "a")!.base.version
+        let v0 = try XCTUnwrap(store.scene.element(id: "a")?.base.version)
         store.transaction { $0.mutate(id: "a") { $0.base.x = 100 } }
-        XCTAssertEqual(store.scene.element(id: "a")!.base.version, v0 + 1) // exactly one bump
+        XCTAssertEqual(store.scene.element(id: "a")?.base.version, v0 + 1) // exactly one bump
     }
 }

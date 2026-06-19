@@ -57,6 +57,16 @@ export class Scene {
   }
 
   add(element: ExcalidrawElement): void {
+    // Never create a second entry for an existing id — a duplicate would render
+    // twice and make selection/delete/move treat one as a phantom copy. Replace
+    // in place if the id is already present.
+    const existing = this.indexById.get(element.id);
+    if (existing !== undefined) {
+      const next = [...this.elementList];
+      next[existing] = element;
+      this.elementList = next;
+      return;
+    }
     this.indexById = new Map(this.indexById);
     this.indexById.set(element.id, this.elementList.length);
     this.elementList = [...this.elementList, element];

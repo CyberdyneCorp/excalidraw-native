@@ -89,6 +89,7 @@ public final class EditorController {
         var seedCounter = 1
         customIDProvider = idProvider
         nextSeed = seedProvider ?? { seedCounter += 1; return seedCounter * 100_001 }
+        idCounter = Self.maxElementNumber(in: scene, prefix: idPrefix)
     }
 
     public var scene: Scene {
@@ -246,7 +247,7 @@ public final class EditorController {
         switch activeTool {
         case .eraser:
             interaction = .erasing(touched: [])
-            eraseAt(event.scenePoint)
+            eraseAt(event.scenePoint, type: event.type)
         case .hand:
             break // panning is handled by the UI layer (viewport)
         default:
@@ -274,7 +275,7 @@ public final class EditorController {
         case let .freehand(id, origin):
             appendFreehandPoint(id: id, origin: origin, point: event.scenePoint, pressure: event.pressure)
         case .erasing:
-            eraseAt(event.scenePoint)
+            eraseAt(event.scenePoint, type: event.type)
         case let .moving(origin, originals):
             var dx = event.scenePoint.x - origin.x
             var dy = event.scenePoint.y - origin.y
@@ -358,6 +359,7 @@ public final class EditorController {
     /// Replace the document with a freshly loaded scene (resets history/selection).
     public func load(scene: Scene) {
         store = Store(scene: scene)
+        idCounter = max(idCounter, Self.maxElementNumber(in: scene, prefix: idPrefix))
         selectedIDs = []
         interaction = .idle
     }
@@ -388,10 +390,12 @@ public final class EditorController {
 
     public func deleteSelected() {
         guard !selectedIDs.isEmpty else { return }
+        let removed = withBoundText(selectedIDs)
         store.transaction { scene in
-            for id in selectedIDs {
+            for id in removed {
                 scene.remove(id: id)
             }
+            Self.dropDanglingRefs(&scene, removed: removed)
         }
         selectedIDs = []
     }
@@ -516,8 +520,8 @@ public final class EditorController {
         snapLinesY = linesY
     }
 
-    private func eraseAt(_ point: Point) {
-        let threshold = handleHitRadius(.mouse)
+    private func eraseAt(_ point: Point, type: PointerType) {
+        let threshold = handleHitRadius(type)
         let hits = scene.visibleElements.filter {
             !$0.base.locked && HitTest.hit($0, at: point, threshold: threshold)
         }
