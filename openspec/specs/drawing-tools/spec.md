@@ -58,6 +58,14 @@ The system SHALL create an empty text element at a point and enter editing, supp
 - WHEN undo is invoked
 - THEN the element SHALL be removed, restoring the prior state (src: Tests/ExcalidrawEditorTests/TextAndImageTests.swift:45)
 
+#### Scenario: Tapping outside commits the text being edited
+- GIVEN an on-canvas text editor is open (a text element being edited)
+- WHEN the user taps anywhere on the canvas outside the editor — a finger tap or
+  lifting the Pencil elsewhere — without pressing any Done button
+- THEN the typed text SHALL be committed to the element, the editor SHALL be
+  dismissed, and the dismissing tap SHALL be consumed so it does not also begin a
+  new element or selection (src: Sources/ExcalidrawUI/EditorModel.swift, Tests/ExcalidrawUITests/EditorModelTests.swift)
+
 ### Requirement: Image insertion
 The system SHALL insert an image element from supplied file data, recording its natural dimensions and crop state, registering the file in the scene, selecting the new element, and reverting the tool to selection (src: Sources/ExcalidrawEditor/EditorController+Commands.swift:142).
 

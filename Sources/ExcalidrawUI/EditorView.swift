@@ -28,6 +28,7 @@ public struct EditorView: View {
     @State private var exportingLibrary = false
     @State private var shareItem: ShareItem?
     @FocusState private var canvasFocused: Bool
+    @FocusState private var textEditorFocused: Bool
 
     private let tools: [(Tool, String)] = [
         (.selection, "cursorarrow"), (.rectangle, "rectangle"), (.diamond, "diamond"),
@@ -357,16 +358,22 @@ public struct EditorView: View {
     @ViewBuilder
     private var textEditor: some View {
         if model.editingTextID != nil {
+            // The text commits as soon as focus leaves the field — tap/click
+            // anywhere outside (or lift the Pencil elsewhere) finishes it, so no
+            // Done button is needed. (A canvas tap also commits via the pointer
+            // handler; this catches keyboard dismissal and toolbar taps.)
             TextField("Text", text: $model.editingText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 200)
                 .position(x: model.editingTextOrigin.x + 100, y: model.editingTextOrigin.y + 20)
                 .accessibilityIdentifier("text-editor")
+                .focused($textEditorFocused)
+                .onAppear { textEditorFocused = true }
+                .onChange(of: textEditorFocused) { _, focused in
+                    if !focused { model.commitText() }
+                }
                 .onSubmit { model.commitText() }
                 .submitLabel(.done)
-                .overlay(alignment: .topTrailing) {
-                    Button("Done") { model.commitText() }.accessibilityIdentifier("text-done").padding(4)
-                }
         }
     }
 

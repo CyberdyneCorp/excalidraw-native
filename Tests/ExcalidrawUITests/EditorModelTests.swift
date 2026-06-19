@@ -47,6 +47,25 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.fontSize, 36)
     }
 
+    func testTappingOutsideCommitsTheTextBeingEdited() {
+        let m = EditorModel()
+        m.select(tool: .text)
+        m.pointer(.down, at: CGPoint(x: 20, y: 20)) // place + begin editing
+        XCTAssertNotNil(m.editingTextID)
+        m.editingText = "Hi"
+
+        // A tap elsewhere commits the text (no Done button) and is consumed.
+        m.pointer(.down, at: CGPoint(x: 300, y: 300))
+
+        XCTAssertNil(m.editingTextID) // editor dismissed
+        guard case let .text(props) = m.controller.scene.visibleElements.first?.kind else {
+            return XCTFail("expected a committed text element")
+        }
+        XCTAssertEqual(props.text, "Hi")
+        // The dismissing tap must not create a second element.
+        XCTAssertEqual(m.controller.scene.visibleElements.count, 1)
+    }
+
     func testStrokeColorAndWidthApplyToSelection() {
         let m = EditorModel()
         m.select(tool: .rectangle)

@@ -113,6 +113,14 @@ public final class EditorModel: ObservableObject {
     ) {
         let scenePoint = viewport.viewToScene(Point(viewPoint.x, viewPoint.y))
 
+        // A pointer-down anywhere outside the on-canvas text editor commits the
+        // text being edited — tap/click away (or lift the Pencil elsewhere) to
+        // finish, no Done button needed. The tap is consumed so it only dismisses.
+        if phase == .down, editingTextID != nil {
+            commitText()
+            return
+        }
+
         // Tap-to-create tools (text/post-it/table) and the ephemeral laser
         // pointer are handled out-of-line; `handlePointerTool` returns true when
         // it fully handled the event (no element/selection forwarding needed).

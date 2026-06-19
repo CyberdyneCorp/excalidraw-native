@@ -40,7 +40,7 @@ final class SmokeUITests: XCTestCase {
         let textField = app.textFields["text-editor"]
         if textField.waitForExistence(timeout: 5) {
             textField.tap(); textField.typeText("Hi")
-            app.buttons["text-done"].tap()
+            canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.9)).tap() // commit by tapping outside
         }
 
         app.buttons["export"].tap()
@@ -55,7 +55,7 @@ final class SmokeUITests: XCTestCase {
         let noteText = app.textFields["text-editor"]
         if noteText.waitForExistence(timeout: 5) {
             noteText.tap(); noteText.typeText("Todo")
-            app.buttons["text-done"].tap()
+            canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.9)).tap() // commit by tapping outside
         }
 
         // Table: drop a grid.
@@ -199,7 +199,7 @@ final class SmokeUITests: XCTestCase {
         let textField = app.textFields["text-editor"]
         if textField.waitForExistence(timeout: 5) {
             textField.tap(); textField.typeText("Metal")
-            app.buttons["text-done"].tap()
+            canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.9)).tap() // commit by tapping outside
         }
         tap("tool-selection")
         snapshot("editor-coregraphics")
