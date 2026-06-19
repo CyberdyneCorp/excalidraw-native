@@ -326,19 +326,23 @@ export class EditorStore {
     this.bump();
   }
 
-  /** Insert an image (downscaled to a max dimension) at the viewport centre. */
+  /** Insert an image (downscaled to a max dimension) at the viewport centre.
+   * Returns the new element's image `fileId` so a host can broker the bytes to
+   * peers (the collab stream carries only the element, never the binary). */
   insertImage(
     dataURL: string,
     mimeType: string,
     naturalWidth: number,
     naturalHeight: number,
-  ): void {
+  ): string {
     const scale = Math.min(1, 320 / Math.max(naturalWidth, naturalHeight, 1));
     const w = naturalWidth * scale;
     const h = naturalHeight * scale;
     const c = this.viewportCenterScene();
-    this.controller.insertImage(dataURL, mimeType, new Point(c.x - w / 2, c.y - h / 2), w, h);
+    const elId = this.controller.insertImage(dataURL, mimeType, new Point(c.x - w / 2, c.y - h / 2), w, h);
     this.bump();
+    const el = this.scene.element(elId);
+    return el?.type === "image" ? (el.fileId ?? "") : "";
   }
 
   // MARK: Generators (placed at the viewport centre)

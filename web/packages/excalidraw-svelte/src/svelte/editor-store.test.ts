@@ -54,6 +54,18 @@ class RecordingContext {
 }
 
 describe("EditorStore", () => {
+  it("insertImage returns the new image's fileId (for brokering bytes to peers)", () => {
+    const store = new EditorStore();
+    const dataURL = "data:image/png;base64,iVBORw0KGgo=";
+    const fileId = store.insertImage(dataURL, "image/png", 100, 80);
+    expect(fileId).not.toBe("");
+    const el = store.scene.visibleElements.find((e) => e.type === "image");
+    expect(el?.type).toBe("image");
+    expect(el?.type === "image" ? el.fileId : null).toBe(fileId);
+    // The bytes live in the scene's file map under that id (local render source).
+    expect(store.scene.files[fileId]?.dataURL).toBe(dataURL);
+  });
+
   it("forwards a pointer drag and creates an element, bumping the revision", () => {
     const store = new EditorStore();
     store.selectTool("rectangle");

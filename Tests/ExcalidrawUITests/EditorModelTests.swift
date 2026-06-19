@@ -158,6 +158,34 @@ final class EditorModelTests: XCTestCase {
         XCTAssertEqual(m.controller.scene.files.count, 1)
     }
 
+    func testInsertImageReturnsFileIdAndFiresBrokerHook() throws {
+        // The host needs the new image's fileId + bytes to broker them to peers
+        // (the collab stream carries only the element). insertImage returns the
+        // fileId and hands the same fileId/bytes to onImageInserted.
+        let payload = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        let data = try XCTUnwrap(Data(base64Encoded: payload))
+        let m = EditorModel()
+        var brokered: (id: String, bytes: Int, mime: String)?
+        m.onImageInserted = { id, d, mime in brokered = (id, d.count, mime) }
+        let fileId = try XCTUnwrap(m.insertImage(data: data, mimeType: "image/png", viewSize: CGSize(width: 400, height: 400)))
+        XCTAssertEqual(brokered?.id, fileId)
+        XCTAssertEqual(brokered?.bytes, data.count)
+        XCTAssertEqual(brokered?.mime, "image/png")
+    }
+
+    func testSetImageFileInjectsRemoteBytes() throws {
+        // A peer's image arrives as an element with a fileId but no local bytes;
+        // the host resolves them out-of-band and injects via setImageFile so the
+        // renderer can draw it.
+        let payload = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        let data = try XCTUnwrap(Data(base64Encoded: payload))
+        let m = EditorModel()
+        XCTAssertNil(m.controller.scene.files["remote-img"])
+        m.setImageFile(id: "remote-img", data: data, mimeType: "image/png")
+        XCTAssertNotNil(m.controller.scene.files["remote-img"])
+        XCTAssertEqual(m.controller.scene.files["remote-img"]?.mimeType, "image/png")
+    }
+
     func testDoubleTapImageEntersCropOverlay() throws {
         // 1×1 PNG.
         let payload = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

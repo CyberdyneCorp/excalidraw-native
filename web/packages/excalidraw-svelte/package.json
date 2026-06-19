@@ -1,7 +1,7 @@
 {
   "name": "@cyberdynecorp/excalidraw-svelte",
-  "version": "0.4.0",
-  "description": "Excalidraw port for the web — framework-agnostic math, model, geometry, rendering, editor, and collaboration protocol, plus a reactive Svelte 5 editor store. Exposed via subpath exports.",
+  "version": "0.4.1",
+  "description": "Excalidraw port for the web \u2014 framework-agnostic math, model, geometry, rendering, editor, and collaboration protocol, plus a reactive Svelte 5 editor store. Exposed via subpath exports.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -60,7 +60,10 @@
     "directory": "web/packages/excalidraw-svelte"
   },
   "homepage": "https://github.com/leonardoaraujosantos/excalidraw-swift-web#readme",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

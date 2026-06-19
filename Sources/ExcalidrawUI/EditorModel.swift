@@ -69,6 +69,10 @@ public final class EditorModel: ObservableObject {
     public var canvasSize: CGSize = .init(width: 1024, height: 768)
     /// Local clipboard fallback when no system pasteboard is wired.
     var clipboard: Data?
+    /// Fired after a local image is inserted, with its `fileId` + raw bytes, so an
+    /// embedder can broker the binary to peers (the collab stream carries only the
+    /// element, never the image data). See `setImageFile` for the receive side.
+    public var onImageInserted: ((_ fileId: String, _ data: Data, _ mimeType: String) -> Void)?
 
     @Published public var theme: Theme = .light
     @Published public var zenMode = false
@@ -671,9 +675,13 @@ public final class EditorModel: ObservableObject {
     // MARK: Image insert
 
     /// Decode image `data`, build a data URL, and insert it centred in the view.
-    public func insertImage(data: Data, mimeType: String, viewSize: CGSize) {
+    /// Insert an image at the viewport centre. Returns the new element's image
+    /// `fileId` (also handed to `onImageInserted`) so an embedder can broker the
+    /// bytes, or nil if the data couldn't be decoded.
+    @discardableResult
+    public func insertImage(data: Data, mimeType: String, viewSize: CGSize) -> String? {
         guard let image = ImageDecoder.decode(dataURL: "data:\(mimeType);base64,\(data.base64EncodedString())") else {
-            return
+            return nil
         }
         let maxDimension = 320.0
         let scale = min(1, maxDimension / Double(max(image.width, image.height)))
@@ -681,12 +689,27 @@ public final class EditorModel: ObservableObject {
         let height = Double(image.height) * scale
         let center = viewport.viewToScene(Point(viewSize.width / 2, viewSize.height / 2))
         let dataURL = "data:\(mimeType);base64,\(data.base64EncodedString())"
-        controller.insertImage(
+        let elementId = controller.insertImage(
             dataURL: dataURL, mimeType: mimeType,
             at: Point(center.x - width / 2, center.y - height / 2), width: width, height: height
         )
         activeTool = .selection
         controller.setTool(.selection)
+        revision += 1
+
+        var fileId: String?
+        if case let .image(props)? = controller.scene.element(id: elementId)?.kind { fileId = props.fileId }
+        if let fileId { onImageInserted?(fileId, data, mimeType) }
+        return fileId
+    }
+
+    /// Supply the bytes for an image element resolved out-of-band — e.g. a peer's
+    /// image fetched from brokered storage — so the renderer can draw it. A remote
+    /// image arrives as an element only (the collab stream carries no binary), so
+    /// it has no local bytes until an embedder provides them here.
+    public func setImageFile(id: String, data: Data, mimeType: String) {
+        let dataURL = "data:\(mimeType);base64,\(data.base64EncodedString())"
+        controller.setImageFile(id: id, dataURL: dataURL, mimeType: mimeType)
         revision += 1
     }
 
