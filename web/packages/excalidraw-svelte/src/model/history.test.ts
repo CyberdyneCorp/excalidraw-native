@@ -95,3 +95,38 @@ describe("Scene.apply", () => {
     expect(scene.element("b")?.x).toBe(99);
   });
 });
+
+describe("Store.commit seals live edits for collaboration (regression)", () => {
+  // Regression: a drag-created/resized shape used `scene.replace` (no version
+  // bump) for live geometry, so it kept its zero-size creation version and never
+  // re-broadcast — peers saw width=0/height=0. commit() must bump the version.
+  it("bumps version on an element changed via replace", () => {
+    const store = new Store(new Scene([rect("a", 0)]));
+    const v0 = store.scene.element("a")!.version;
+    store.modifyScene((s) => {
+      s.replace({ ...s.element("a")!, width: 120, height: 80 });
+    });
+    expect(store.scene.element("a")!.version).toBe(v0); // replace doesn't bump
+    store.commit();
+    expect(store.scene.element("a")!.width).toBe(120);
+    expect(store.scene.element("a")!.version).toBeGreaterThan(v0); // sealed
+  });
+
+  it("seals a newly created element's grown geometry", () => {
+    const store = new Store(new Scene([]));
+    store.modifyScene((s) => s.add(rect("new", 0)));
+    const vNew = store.scene.element("new")!.version;
+    store.modifyScene((s) => {
+      s.replace({ ...s.element("new")!, width: 120, height: 80 });
+    });
+    store.commit();
+    expect(store.scene.element("new")!.version).toBeGreaterThan(vNew);
+  });
+
+  it("does not double-bump a discrete mutate edit", () => {
+    const store = new Store(new Scene([rect("a", 0)]));
+    const v0 = store.scene.element("a")!.version;
+    store.transaction((s) => s.mutate("a", (el) => (el.x = 100)));
+    expect(store.scene.element("a")!.version).toBe(v0 + 1); // exactly one bump
+  });
+});

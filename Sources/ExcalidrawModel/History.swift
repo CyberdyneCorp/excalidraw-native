@@ -124,10 +124,30 @@ public struct Store: Sendable {
     }
 
     /// Capture any changes made to `scene` since the last commit as one undo step.
+    ///
+    /// Live interactions (create/resize/move/freehand) update geometry via
+    /// `scene.replace`, which does **not** bump `version` — so the net change is
+    /// sealed here: every element that changed since the last commit gets a
+    /// `version`/`versionNonce` bump. Collaboration relies on this: the broadcast
+    /// diff and LWW reconciliation are version-based, so without the bump a
+    /// drag-created shape would keep its zero-size creation version and never
+    /// re-broadcast its final geometry. Elements already bumped during the
+    /// interaction (discrete `mutate` edits) are left as-is.
     public mutating func commit() {
-        let delta = SceneDelta.between(snapshot, scene.elements)
-        guard !delta.isEmpty else { return }
-        history.record(delta)
+        let raw = SceneDelta.between(snapshot, scene.elements)
+        guard !raw.isEmpty else { return }
+        for (id, change) in raw.changes {
+            guard let after = change.after else { continue } // removals: nothing to bump
+            // Bump unless a discrete edit already advanced the version this commit
+            // (existing element whose version grew). A newly created element
+            // (no `before`) is always sealed — its creation version may already
+            // have broadcast at an intermediate, mid-drag size.
+            let alreadyBumped = change.before.map { $0.base.version < after.base.version } ?? false
+            if !alreadyBumped {
+                scene.mutate(id: id, versionNonce: Int.random(in: 0 ... 0x7fff_ffff)) { _ in }
+            }
+        }
+        history.record(SceneDelta.between(snapshot, scene.elements))
         snapshot = scene.elements
     }
 

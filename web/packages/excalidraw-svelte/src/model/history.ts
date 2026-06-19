@@ -124,11 +124,30 @@ export class Store {
     this.snapshot = this.scene.elements;
   }
 
-  /** Capture changes since the last commit as one undo step. */
+  /**
+   * Capture changes since the last commit as one undo step.
+   *
+   * Live interactions (create/resize/move/freedraw) update geometry via
+   * `scene.replace`, which does **not** bump `version` — so the net change is
+   * sealed here: every element changed since the last commit gets a
+   * `version`/`versionNonce` bump. Collaboration relies on this — the broadcast
+   * diff and LWW reconciliation are version-based, so without the bump a
+   * drag-created shape keeps its zero-size creation version and never
+   * re-broadcasts its final geometry. Elements already bumped during the
+   * interaction (discrete `mutate` edits) are left as-is. (parity: History.swift)
+   */
   commit(): void {
-    const delta = SceneDelta.between(this.snapshot, this.scene.elements);
-    if (delta.isEmpty) return;
-    this.history.record(delta);
+    const raw = SceneDelta.between(this.snapshot, this.scene.elements);
+    if (raw.isEmpty) return;
+    for (const [id, change] of raw.changes) {
+      if (change.after === null) continue; // removals: nothing to bump
+      const alreadyBumped =
+        change.before !== null && change.before.version < change.after.version;
+      if (!alreadyBumped) {
+        this.scene.mutate(id, () => {}, { versionNonce: Math.floor(Math.random() * 0x7fffffff) });
+      }
+    }
+    this.history.record(SceneDelta.between(this.snapshot, this.scene.elements));
     this.snapshot = this.scene.elements;
   }
 
