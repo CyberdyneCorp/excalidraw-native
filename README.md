@@ -1,9 +1,10 @@
-# Excalidraw — Native Swift + TypeScript/Svelte port
+# Excalidraw — Native Swift + TypeScript/Svelte + Kotlin port
 
-Two from-scratch ports of [Excalidraw](https://excalidraw.com), built as **twins** that share one data model, the same `.excalidraw` v2 file format, a language-neutral [OpenSpec](openspec/) contract, and a custom WebSocket **collaboration protocol** — so they edit the same scene together:
+From-scratch native ports of [Excalidraw](https://excalidraw.com) that share one data model, the same `.excalidraw` v2 file format, a language-neutral [OpenSpec](openspec/) contract, and a custom WebSocket **collaboration protocol** — so they edit the same scene together:
 
 - **Native iOS / iPadOS** in **Swift / SwiftUI** (`Sources/`, `App/`) — first-class Apple Pencil, finger-friendly UX, Core Graphics + an optional **Metal** GPU renderer.
 - **Web** in **TypeScript + Svelte 5** (`web/` pnpm workspace) — Canvas2D, reusing the upstream `roughjs` / `perfect-freehand` the Swift side re-ported.
+- **Native Android** in **Kotlin + Jetpack Compose** (`android/`) — an independent reimplementation (no Swift reuse) sharing only the `.excalidraw` format and collaboration wire protocol; Compose Canvas (Skia) rendering with Kotlin `rough.js` / `perfect-freehand` re-ports. **In progress** — single-user editor (draw, select/transform, undo/redo, export) is implemented and emulator-verified; live collaboration is a later milestone. See [`android/README.md`](android/README.md) and the [`add-native-android-client`](openspec/changes/add-native-android-client/) change.
 
 > **Status: both implementations feature-complete, and real-time iPad ↔ browser collaboration is delivered.** An iPad simulator and a browser join one room over a Node relay and converge live — verified end-to-end (XCUITest + Playwright). **600+ Swift tests** (~92% logic coverage) · **450 web unit tests + 22 Playwright E2E** · CI green on both pipelines. Remaining work is a small set of tracked gaps — see **[Known gaps](#known-gaps)**.
 

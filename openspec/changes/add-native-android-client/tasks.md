@@ -66,10 +66,10 @@
 
 ## 9. CI & baseline docs
 
-- [ ] 9.1 Add an Android CI job: `assemble`, unit tests, instrumented/UI tests, ktlint/detekt
+- [x] 9.1 Add an Android CI job: `assemble`, unit tests, instrumented/UI tests, ktlint/detekt
 - [ ] 9.2 Add cross-client golden round-trip + live collaboration interop tests to CI
 - [x] 9.3 Update `openspec/project.md` baseline: multi-platform (iOS/Swift, web/Svelte, Android/Kotlin) unified by `.excalidraw` format + Yjs wire protocol
-- [ ] 9.4 Update repo README/docs to document the Android client and how to build/run it
+- [x] 9.4 Update repo README/docs to document the Android client and how to build/run it
 
 ## 10. Validation & archive
 
