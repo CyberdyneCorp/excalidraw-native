@@ -21,8 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -212,6 +214,12 @@ private fun Toolbar(scene: SceneState) {
         ToolButton("+") { scene.zoomBy(1.2f) }
         ToolButton("−") { scene.zoomBy(1f / 1.2f) }
         ToolButton("Reset") { scene.resetCamera() }
+        val context = LocalContext.current
+        ToolButton("Export") {
+            val png = Exporter.exportPng(context, scene)
+            val doc = Exporter.exportExcalidraw(context, scene)
+            Toast.makeText(context, "Exported ${png.name} + ${doc.name}", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 

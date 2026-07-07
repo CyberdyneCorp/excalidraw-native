@@ -60,9 +60,9 @@
 
 ## 8. Export
 
-- [ ] 8.1 Implement PNG export of the rendered scene
-- [ ] 8.2 Implement `.excalidraw` export preserving unmodelled data
-- [ ] 8.3 Test exported files open on iOS/web with modelled + unmodelled data intact
+- [x] 8.1 Implement PNG export of the rendered scene
+- [x] 8.2 Implement `.excalidraw` export preserving unmodelled data
+- [x] 8.3 Test exported files open on iOS/web with modelled + unmodelled data intact
 
 ## 9. CI & baseline docs
 
