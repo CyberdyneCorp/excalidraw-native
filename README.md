@@ -119,7 +119,7 @@ Both implementations are packaged for reuse in other projects.
 - **Swift (SwiftPM):** add the package and depend on the products you need.
 
   ```swift
-  .package(url: "https://github.com/leonardoaraujosantos/excalidraw-swift-web.git", from: "0.5.3")
+  .package(url: "https://github.com/leonardoaraujosantos/excalidraw-swift-web.git", from: "0.6.0")
   // products: ExcalidrawModel, ExcalidrawGeometry, ExcalidrawEditor,
   //           ExcalidrawCollab, ExcalidrawRender, ExcalidrawUI, RoughKit, FreehandKit, …
   ```
