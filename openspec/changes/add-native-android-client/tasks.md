@@ -25,9 +25,9 @@
 
 ## 3. Hand-drawn rendering (parity: hand-drawn-rendering)
 
-- [ ] 3.1 Port rough.js to `rough-kotlin`: hachure + solid fills, sloppiness/roughness, seeded RNG
-- [ ] 3.2 Test seeded-roughness stability (same seed → identical geometry across renders)
-- [ ] 3.3 Port perfect-freehand to `freehand-kotlin`: pressure-based stroke outlines
+- [x] 3.1 Port rough.js to `rough-kotlin`: hachure + solid fills, sloppiness/roughness, seeded RNG
+- [x] 3.2 Test seeded-roughness stability (same seed → identical geometry across renders)
+- [x] 3.3 Port perfect-freehand to `freehand-kotlin`: pressure-based stroke outlines
 - [ ] 3.4 Golden-image tolerance tests for rough + freehand output vs iOS/web references
 
 ## 4. Scene rendering (parity: scene-rendering)

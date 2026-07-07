@@ -7,7 +7,7 @@ the `.excalidraw` file format and the Yjs collaboration wire protocol. See
 OpenSpec change for the behavioral contract, and `../openspec/project.md` for
 the multi-platform overview.
 
-## Status — Milestone 1 (implemented & verified on emulator)
+## Status — Milestones 1–2 (implemented & verified on emulator)
 
 - `.excalidraw` model with **lenient decode** (missing keys default; tolerant
   arrow bindings) and **lossless round-trip** of unmodelled data
@@ -17,10 +17,14 @@ the multi-platform overview.
   zoom).
 - Interactive editor loop: pan/pinch-zoom (Select), and drag-to-create for
   rectangle / ellipse / diamond plus freehand Draw.
+- **Hand-drawn look:** Kotlin ports of rough.js (`:rough-kotlin` — sketchy
+  strokes + hachure fills, seeded RNG) and perfect-freehand (`:freehand-kotlin`
+  — variable-width ink outlines), wired into the renderer. Unit-tested (9 + 6
+  tests).
 
-**Not yet (later milestones):** hand-drawn rough.js/perfect-freehand ports,
-selection/transform, undo/redo, full tool set, export, and live Yjs
-collaboration. Tracked in `../openspec/changes/add-native-android-client/tasks.md`.
+**Not yet (later milestones):** selection/transform, undo/redo, full tool set,
+export, and live Yjs collaboration. Tracked in
+`../openspec/changes/add-native-android-client/tasks.md`.
 
 ## Toolchain
 
@@ -50,9 +54,10 @@ adb shell am start -n com.excalidraw.android/.MainActivity
 
 | Module        | Role                                                            |
 |---------------|----------------------------------------------------------------|
-| `:core-model` | `.excalidraw` element model, coding, lenient decode, factory   |
-| `:app`        | Jetpack Compose host, Skia renderer, gestures, tools           |
+| `:core-model`     | `.excalidraw` element model, coding, lenient decode, factory |
+| `:rough-kotlin`   | rough.js port — sketchy strokes + hachure fills (pure JVM)   |
+| `:freehand-kotlin`| perfect-freehand port — variable-width ink (pure JVM)       |
+| `:app`            | Jetpack Compose host, Skia renderer, gestures, tools        |
 
 The remaining modules from the design (`core-math`, `core-geometry`,
-`rough-kotlin`, `freehand-kotlin`, `render-compose`, `editor`, `collab-yjs`)
-are added as later milestones land.
+`render-compose`, `editor`, `collab-yjs`) are added as later milestones land.

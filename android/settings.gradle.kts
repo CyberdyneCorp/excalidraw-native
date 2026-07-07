@@ -28,4 +28,6 @@ dependencyResolutionManagement {
 rootProject.name = "excalidraw-android"
 
 include(":core-model")
+include(":rough-kotlin")
+include(":freehand-kotlin")
 include(":app")

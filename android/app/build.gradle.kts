@@ -44,6 +44,8 @@ kotlin {
 
 dependencies {
     implementation(project(":core-model"))
+    implementation(project(":rough-kotlin"))
+    implementation(project(":freehand-kotlin"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
