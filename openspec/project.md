@@ -1,6 +1,12 @@
 # Project Context
 
-Native iOS (iPhone + iPad) port of [Excalidraw](https://excalidraw.com) in Swift / SwiftUI, aiming for feature parity with the web app, first-class Apple Pencil support, and finger-friendly UX. These baseline specs were reverse-engineered from the existing, feature-complete single-user codebase (README + docs/ROADMAP Phases 0–7.5) and describe **observed behavior**, not proposals. Future work flows through normal OpenSpec changes against this baseline.
+Multi-platform port of [Excalidraw](https://excalidraw.com), aiming for feature parity with the web app and finger-/stylus-friendly UX. The product has three clients unified by two shared contracts — the `.excalidraw` **file format** and the **Yjs collaboration wire protocol**:
+
+- **iOS/Swift** — a native iPhone + iPad app (Swift / SwiftUI) over a pure, UI-free core, with first-class Apple Pencil support. This is the original, feature-complete client and the source of most baseline specs below.
+- **web/Svelte** — a Svelte 5 browser client (`web-client`) wrapping the same shared editor behavior.
+- **Android/Kotlin** — an independent Kotlin + Jetpack Compose client (`android-client`) that **reimplements** (does not reuse) the shared behavior in Kotlin, conforming to the same behavioral specs and interop contracts. See the `add-native-android-client` change and the `android/` module tree. Milestone 1 (model + `.excalidraw` round-trip + Compose Skia rendering + basic drawing tools) is implemented and runs on the emulator; full editor parity and live collaboration are in progress.
+
+These baseline specs were reverse-engineered from the existing, feature-complete iOS/Swift codebase (README + docs/ROADMAP Phases 0–7.5) and describe **observed behavior**, not proposals. The Swift/iOS specs remain authoritative for the Swift core. Future work flows through normal OpenSpec changes against this baseline.
 
 ## Stack & constraints
 
