@@ -1,7 +1,8 @@
 <script lang="ts">
 import { EditorStore, browserSocket, reconnectingSocket } from "@cyberdynecorp/excalidraw-svelte";
 import type { Tool } from "@cyberdynecorp/excalidraw-svelte/editor";
-import type { FillStyle } from "@cyberdynecorp/excalidraw-svelte/model";
+import { FontFamily } from "@cyberdynecorp/excalidraw-svelte/model";
+import type { Arrowhead, FillStyle, StrokeStyle, TextAlign } from "@cyberdynecorp/excalidraw-svelte/model";
 import { type AwarenessLike, YjsCollab } from "@cyberdynecorp/excalidraw-yjs";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
@@ -94,6 +95,66 @@ const styledTools = new Set<Tool>([
 const panelOpen = $derived(view.selectedCount > 0 || styledTools.has(view.tool));
 // The style panel starts collapsed; a small toggle island expands it.
 let panelExpanded = $state(false);
+
+// Excalidraw's preset palettes (identical hex values, so files opened on
+// excalidraw.com highlight the same swatches).
+const STROKE_SWATCHES = ["#1e1e1e", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
+const BG_SWATCHES = ["transparent", "#ffc9c9", "#b2f2bb", "#a5d8ff", "#ffec99"];
+const FONT_FAMILIES = [
+  { id: FontFamily.excalifont, label: "Hand-drawn", glyph: "✍" },
+  { id: FontFamily.helvetica, label: "Normal", glyph: "A" },
+  { id: FontFamily.cascadia, label: "Code", glyph: "‹›" },
+];
+const FONT_SIZES = [
+  { size: 16, label: "S" },
+  { size: 20, label: "M" },
+  { size: 28, label: "L" },
+  { size: 36, label: "XL" },
+];
+const ARROWHEADS = ["none", "arrow", "triangle", "bar", "dot", "diamond"] as const;
+
+// Style values the panel shows: the first selected element's, falling back to
+// the defaults for the next element (excalidraw's reflection rule).
+const sel = $derived.by(() => {
+  void rev;
+  const el = store.controller.selectedElements[0];
+  const ci = store.controller.currentItem;
+  const textEl = el !== undefined && el.type === "text" ? el : undefined;
+  const arrowEl = el !== undefined && el.type === "arrow" ? el : undefined;
+  const linearEl = el !== undefined && (el.type === "arrow" || el.type === "line") ? el : undefined;
+  const types = new Set(store.controller.selectedElements.map((e) => e.type));
+  const arrowType =
+    linearEl !== undefined
+      ? arrowEl?.elbowed
+        ? "elbow"
+        : linearEl.roundness !== null
+          ? "curved"
+          : "straight"
+      : ci.elbowed
+        ? "elbow"
+        : ci.arrowCurved
+          ? "curved"
+          : "straight";
+  return {
+    strokeColor: el?.strokeColor ?? ci.strokeColor,
+    backgroundColor: el?.backgroundColor ?? ci.backgroundColor,
+    fillStyle: el?.fillStyle ?? ci.fillStyle,
+    strokeWidth: el?.strokeWidth ?? ci.strokeWidth,
+    strokeStyle: el?.strokeStyle ?? ci.strokeStyle,
+    roughness: el?.roughness ?? ci.roughness,
+    roundEdges: el !== undefined ? el.roundness !== null : ci.roundEdges,
+    opacity: el?.opacity ?? ci.opacity,
+    fontFamily: textEl?.fontFamily ?? ci.fontFamily,
+    fontSize: textEl?.fontSize ?? ci.fontSize,
+    textAlign: textEl?.textAlign ?? ci.textAlign,
+    arrowType,
+    startArrowhead: arrowEl !== undefined ? arrowEl.startArrowhead : ci.startArrowhead,
+    endArrowhead: arrowEl !== undefined ? arrowEl.endArrowhead : ci.endArrowhead,
+    textContext: view.tool === "text" || types.has("text"),
+    arrowContext:
+      view.tool === "arrow" || view.tool === "line" || types.has("arrow") || types.has("line"),
+  };
+});
 // The "more tools" dropdown (extra tools + generators), excalidraw-style.
 let moreOpen = $state(false);
 
@@ -183,14 +244,6 @@ function importImage(e: Event): void {
   };
   reader.readAsDataURL(file);
 }
-
-// biome-ignore-start lint/style/useConst: `bind:value` assigns to these $state vars
-let strokeColor = $state("#1e1e1e");
-let backgroundColor = $state("transparent");
-let strokeWidth = $state(2);
-let elbowed = $state(false);
-let fillStyle = $state<FillStyle>("hachure");
-// biome-ignore-end lint/style/useConst: `bind:value` assigns to these $state vars
 
 function pick(tool: Tool): void {
   store.selectTool(tool);
@@ -488,32 +541,176 @@ function onKeydown(e: KeyboardEvent): void {
       </header>
       <section>
         <h4>Stroke</h4>
-        <div class="row">
-          <input type="color" bind:value={strokeColor} onchange={() => store.setStrokeColor(strokeColor)} aria-label="Stroke color" />
-          <label class="inline">Width
-            <input type="range" min="1" max="12" bind:value={strokeWidth} onchange={() => store.setStrokeWidth(strokeWidth)} />
-          </label>
+        <div class="row wrap">
+          {#each STROKE_SWATCHES as c (c)}
+            <button
+              class="swatch"
+              class:active={sel.strokeColor === c}
+              style="--sw:{c}"
+              title={c}
+              aria-label={`Stroke ${c}`}
+              onclick={() => store.setStrokeColor(c)}
+            ></button>
+          {/each}
+          <input
+            class="swatch-custom"
+            type="color"
+            value={sel.strokeColor.startsWith("#") ? sel.strokeColor.slice(0, 7) : "#1e1e1e"}
+            oninput={(e) => store.setStrokeColor((e.currentTarget as HTMLInputElement).value)}
+            aria-label="Custom stroke color"
+            title="Custom colour"
+          />
         </div>
       </section>
       <section>
         <h4>Background</h4>
-        <div class="row">
-          <input type="color" bind:value={backgroundColor} onchange={() => store.setBackgroundColor(backgroundColor)} aria-label="Background color" />
-          <select data-testid="fill-style" bind:value={fillStyle} onchange={() => store.setFillStyle(fillStyle)} aria-label="Fill style">
-            <option value="hachure">Hachure</option>
-            <option value="cross-hatch">Cross-hatch</option>
-            <option value="solid">Solid</option>
-            <option value="zigzag">Zigzag</option>
-          </select>
+        <div class="row wrap">
+          {#each BG_SWATCHES as c (c)}
+            <button
+              class="swatch"
+              class:transparent={c === "transparent"}
+              class:active={sel.backgroundColor === c}
+              style="--sw:{c === 'transparent' ? 'transparent' : c}"
+              title={c}
+              aria-label={`Background ${c}`}
+              onclick={() => store.setBackgroundColor(c)}
+            ></button>
+          {/each}
+          <input
+            class="swatch-custom"
+            type="color"
+            value={sel.backgroundColor.startsWith("#") ? sel.backgroundColor.slice(0, 7) : "#ffec99"}
+            oninput={(e) => store.setBackgroundColor((e.currentTarget as HTMLInputElement).value)}
+            aria-label="Custom background color"
+            title="Custom colour"
+          />
         </div>
       </section>
       <section>
-        <h4>Arrows</h4>
-        <label class="inline">
-          <input type="checkbox" bind:checked={elbowed} onchange={() => store.setElbowed(elbowed)} />
-          Elbow arrows
-        </label>
+        <h4>Fill</h4>
+        <select
+          data-testid="fill-style"
+          value={sel.fillStyle}
+          onchange={(e) => store.setFillStyle((e.currentTarget as HTMLSelectElement).value as FillStyle)}
+          aria-label="Fill style"
+        >
+          <option value="hachure">Hachure</option>
+          <option value="cross-hatch">Cross-hatch</option>
+          <option value="solid">Solid</option>
+          <option value="zigzag">Zigzag</option>
+        </select>
       </section>
+      <section>
+        <h4>Stroke width</h4>
+        <div class="seg">
+          {#each [{ w: 1, label: "Thin", glyph: "─" }, { w: 2, label: "Bold", glyph: "━" }, { w: 4, label: "Extra bold", glyph: "▬" }] as o (o.w)}
+            <button class="seg-btn" data-testid={`stroke-width-${o.w}`} class:active={sel.strokeWidth === o.w} title={o.label} onclick={() => store.setStrokeWidth(o.w)}>{o.glyph}</button>
+          {/each}
+        </div>
+      </section>
+      <section>
+        <h4>Stroke style</h4>
+        <div class="seg">
+          {#each [{ v: "solid", glyph: "—" }, { v: "dashed", glyph: "╌" }, { v: "dotted", glyph: "┈" }] as o (o.v)}
+            <button class="seg-btn" data-testid={`stroke-style-${o.v}`} class:active={sel.strokeStyle === o.v} title={o.v} onclick={() => store.setStrokeStyle(o.v as StrokeStyle)}>{o.glyph}</button>
+          {/each}
+        </div>
+      </section>
+      <section>
+        <h4>Sloppiness</h4>
+        <div class="seg">
+          {#each [{ r: 0, label: "Architect", glyph: "﹏" }, { r: 1, label: "Artist", glyph: "〰" }, { r: 2, label: "Cartoonist", glyph: "≈" }] as o (o.r)}
+            <button class="seg-btn" data-testid={`sloppiness-${o.r}`} class:active={sel.roughness === o.r} title={o.label} onclick={() => store.setRoughness(o.r)}>{o.glyph}</button>
+          {/each}
+        </div>
+      </section>
+      <section>
+        <h4>Edges</h4>
+        <div class="seg">
+          <button class="seg-btn" data-testid="edges-sharp" class:active={!sel.roundEdges} title="Sharp" onclick={() => store.setRoundEdges(false)}>⌐</button>
+          <button class="seg-btn" data-testid="edges-round" class:active={sel.roundEdges} title="Round" onclick={() => store.setRoundEdges(true)}>◠</button>
+        </div>
+      </section>
+      <section>
+        <h4>Opacity</h4>
+        <input
+          data-testid="opacity"
+          type="range"
+          min="0"
+          max="100"
+          step="10"
+          value={sel.opacity}
+          oninput={(e) => store.setOpacity(Number((e.currentTarget as HTMLInputElement).value))}
+          aria-label="Opacity"
+        />
+      </section>
+      {#if sel.textContext}
+        <section>
+          <h4>Font family</h4>
+          <div class="seg">
+            {#each FONT_FAMILIES as f (f.id)}
+              <button class="seg-btn" data-testid={`font-family-${f.label.toLowerCase()}`} class:active={sel.fontFamily === f.id} title={f.label} onclick={() => store.setFontFamily(f.id)}>{f.glyph}</button>
+            {/each}
+          </div>
+        </section>
+        <section>
+          <h4>Font size</h4>
+          <div class="seg">
+            {#each FONT_SIZES as f (f.size)}
+              <button class="seg-btn" data-testid={`font-size-${f.label.toLowerCase()}`} class:active={sel.fontSize === f.size} title={`${f.size}px`} onclick={() => store.setFontSize(f.size)}>{f.label}</button>
+            {/each}
+          </div>
+        </section>
+        <section>
+          <h4>Text align</h4>
+          <div class="seg">
+            {#each [{ v: "left", glyph: "L" }, { v: "center", glyph: "C" }, { v: "right", glyph: "R" }] as o (o.v)}
+              <button class="seg-btn" data-testid={`text-align-${o.v}`} class:active={sel.textAlign === o.v} title={o.v} onclick={() => store.setTextAlign(o.v as TextAlign)}>{o.glyph}</button>
+            {/each}
+          </div>
+        </section>
+      {/if}
+      {#if sel.arrowContext}
+        <section>
+          <h4>Arrow type</h4>
+          <div class="seg">
+            {#each [{ v: "straight", glyph: "—" }, { v: "curved", glyph: "⌒" }, { v: "elbow", glyph: "⌐" }] as o (o.v)}
+              <button class="seg-btn" data-testid={`arrow-type-${o.v}`} class:active={sel.arrowType === o.v} title={o.v} onclick={() => store.setArrowType(o.v as "straight" | "curved" | "elbow")}>{o.glyph}</button>
+            {/each}
+          </div>
+        </section>
+        <section>
+          <h4>Arrowheads</h4>
+          <div class="row">
+            <label class="inline">Start
+              <select
+                data-testid="arrowhead-start"
+                value={sel.startArrowhead ?? "none"}
+                onchange={(e) => {
+                  const v = (e.currentTarget as HTMLSelectElement).value;
+                  store.setStartArrowhead(v === "none" ? null : (v as Arrowhead));
+                }}
+                aria-label="Start arrowhead"
+              >
+                {#each ARROWHEADS as h (h)}<option value={h}>{h}</option>{/each}
+              </select>
+            </label>
+            <label class="inline">End
+              <select
+                data-testid="arrowhead-end"
+                value={sel.endArrowhead ?? "none"}
+                onchange={(e) => {
+                  const v = (e.currentTarget as HTMLSelectElement).value;
+                  store.setEndArrowhead(v === "none" ? null : (v as Arrowhead));
+                }}
+                aria-label="End arrowhead"
+              >
+                {#each ARROWHEADS as h (h)}<option value={h}>{h}</option>{/each}
+              </select>
+            </label>
+          </div>
+        </section>
+      {/if}
       <section>
         <h4>Actions</h4>
         <div class="row wrap">
@@ -729,7 +926,7 @@ function onKeydown(e: KeyboardEvent): void {
     position: absolute;
     top: 80px;
     left: 16px;
-    width: 208px;
+    width: 232px;
     max-height: calc(100% - 160px);
     overflow-y: auto;
     padding: 12px 14px;
@@ -745,6 +942,49 @@ function onKeydown(e: KeyboardEvent): void {
     color: var(--muted);
   }
   .row { display: flex; align-items: center; gap: 8px; }
+  .swatch {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--sw);
+    cursor: pointer;
+  }
+  .swatch.transparent {
+    background: repeating-conic-gradient(#d0d0d8 0% 25%, #ffffff 0% 50%) 0 0 / 10px 10px;
+  }
+  .swatch.active {
+    outline: 2px solid var(--active-ink);
+    outline-offset: 1px;
+  }
+  .swatch-custom {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px dashed var(--muted);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .seg { display: flex; gap: 3px; flex-wrap: wrap; }
+  .seg-btn {
+    min-width: 30px;
+    height: 28px;
+    padding: 0 7px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .seg-btn:hover { background: var(--hover); }
+  .seg-btn.active {
+    background: var(--active-bg);
+    color: var(--active-ink);
+    border-color: transparent;
+  }
   .row.wrap { flex-wrap: wrap; }
   .panel input[type="color"] {
     width: 26px;

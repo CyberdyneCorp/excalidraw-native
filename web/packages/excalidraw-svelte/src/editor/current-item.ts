@@ -4,6 +4,7 @@ import {
   type FillStyle,
   FontFamily,
   type StrokeStyle,
+  type TextAlign,
   defaultBase,
 } from "../model/index.js";
 
@@ -25,6 +26,10 @@ export interface CurrentItem {
   roundEdges: boolean;
   startArrowhead: Arrowhead | null;
   endArrowhead: Arrowhead | null;
+  textAlign: TextAlign;
+  /** Whether new arrows/lines are curved (proportional roundness); the shape
+   * `roundEdges` toggle deliberately doesn't apply to linear elements. */
+  arrowCurved: boolean;
 }
 
 export function defaultCurrentItem(): CurrentItem {
@@ -42,6 +47,8 @@ export function defaultCurrentItem(): CurrentItem {
     roundEdges: true,
     startArrowhead: null,
     endArrowhead: "arrow",
+    textAlign: "left",
+    arrowCurved: false,
   };
 }
 

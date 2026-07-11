@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Point } from "../math/index.js";
+import { FontFamily, RoundnessType } from "../model/index.js";
 import { Viewport } from "../render/index.js";
 import { EditorStore } from "./editor-store.js";
 
@@ -348,6 +349,82 @@ describe("EditorStore", () => {
     const rect = store.scene.visibleElements.find((e) => e.type === "rectangle")!;
     expect(rect.fillStyle).toBe("cross-hatch");
     expect(store.controller.currentItem.fillStyle).toBe("cross-hatch");
+  });
+});
+
+describe("style panel setters", () => {
+  function drawArrow(store: EditorStore): void {
+    store.selectTool("arrow");
+    store.pointer("down", new Point(100, 100));
+    store.pointer("move", new Point(300, 150));
+    store.pointer("up", new Point(300, 150)); // stays selected, tool reverts
+  }
+  const arrow = (store: EditorStore, index = 0) =>
+    store.scene.visibleElements.filter((e) => e.type === "arrow")[index]!;
+
+  it("arrowhead setters apply to the selected arrow and to the next one", () => {
+    const store = new EditorStore();
+    drawArrow(store);
+    store.setStartArrowhead("triangle");
+    store.setEndArrowhead(null);
+    expect(arrow(store).startArrowhead).toBe("triangle");
+    expect(arrow(store).endArrowhead).toBeNull();
+
+    store.pointer("down", new Point(600, 500)); // deselect on empty canvas
+    store.pointer("up", new Point(600, 500));
+    drawArrow(store);
+    expect(arrow(store, 1).startArrowhead).toBe("triangle"); // new default
+    expect(arrow(store, 1).endArrowhead).toBeNull();
+  });
+
+  it("setArrowType round-trips straight, curved, and elbow", () => {
+    const store = new EditorStore();
+    drawArrow(store);
+    store.setArrowType("curved");
+    expect(arrow(store).roundness?.type).toBe(RoundnessType.proportionalRadius);
+    expect(arrow(store).elbowed).toBe(false);
+
+    store.setArrowType("elbow");
+    expect(arrow(store).elbowed).toBe(true);
+
+    store.setArrowType("straight");
+    expect(arrow(store).elbowed).toBe(false);
+    expect(arrow(store).roundness ?? null).toBeNull();
+
+    // Curved becomes the default for the next arrow.
+    store.setArrowType("curved");
+    store.pointer("down", new Point(600, 500));
+    store.pointer("up", new Point(600, 500));
+    drawArrow(store);
+    expect(arrow(store, 1).roundness?.type).toBe(RoundnessType.proportionalRadius);
+  });
+
+  it("font setters update selected text (with size recompute) and defaults", () => {
+    const store = new EditorStore();
+    store.selectTool("text");
+    store.pointer("down", new Point(200, 200));
+    store.setEditingText("Hi");
+    store.commitText();
+    const text = () => store.scene.visibleElements.find((e) => e.type === "text")!;
+    const widthBefore = text().width;
+
+    store.setFontSize(36);
+    store.setTextAlign("center");
+    store.setFontFamily(FontFamily.cascadia);
+    expect(text().fontSize).toBe(36);
+    expect(text().textAlign).toBe("center");
+    expect(text().fontFamily).toBe(FontFamily.cascadia);
+    expect(text().width).toBeGreaterThan(widthBefore); // remeasured at 36px
+
+    // Defaults carry to the next text element.
+    store.selectTool("selection");
+    store.doubleClickAt(new Point(500, 400));
+    store.setEditingText("Next");
+    store.commitText();
+    const next = store.scene.visibleElements.filter((e) => e.type === "text")[1]!;
+    expect(next.fontSize).toBe(36);
+    expect(next.textAlign).toBe("center");
+    expect(next.fontFamily).toBe(FontFamily.cascadia);
   });
 });
 

@@ -82,7 +82,7 @@ pnpm build:libs              # tsc → dist (.js + .d.ts) for the library and th
 pnpm publish:libs            # rewrites workspace:* → versions, publishes to the configured registry
 ```
 
-Versions live in each package's `package.json` (currently `0.7.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
+Versions live in each package's `package.json` (currently `0.8.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
 
 ## Develop
 
@@ -379,3 +379,13 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     **hand tool actually pan**, snapped click-to-connect endpoints landing
     inside a shape to its nearest anchor, and fixed bindable-target detection
     so arrows bind to a labelled shape itself, never its bound label text.
+  - **Style panel parity (Phase 2, `web-style-panel-parity`):** the left panel
+    now carries excalidraw's control set — stroke/background **swatch
+    palettes** (excalidraw's presets + custom picker), stroke width presets,
+    stroke style (solid/dashed/dotted), **sloppiness**, **edges**, **opacity**,
+    contextual **font** (family/size/align) and **arrow** (type
+    straight/curved/elbow + start/end arrowheads) sections — all reflecting
+    the selection and setting defaults for the next element. New store
+    setters (`setArrowType`, `setStart/EndArrowhead`, `setFontFamily/Size`,
+    `setTextAlign`) write only standard fields, so files and collab are
+    unaffected.

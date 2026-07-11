@@ -9,12 +9,14 @@ import {
 import { unrotatedOutline } from "../geometry/index.js";
 import { Point } from "../math/index.js";
 import {
+  type Arrowhead,
   type ExcalidrawElement,
   type FillStyle,
   RoundnessType,
   Scene,
   SceneDocument,
   type StrokeStyle,
+  type TextAlign,
 } from "../model/index.js";
 import type { Peer } from "../protocol/index.js";
 import { reconcileElements } from "../protocol/index.js";
@@ -342,6 +344,54 @@ export class EditorStore {
   }
   setElbowed(elbowed: boolean): void {
     this.controller.setElbowed(elbowed);
+    this.bump();
+  }
+  setStartArrowhead(head: Arrowhead | null): void {
+    this.controller.currentItem.startArrowhead = head;
+    this.applyToSelection((el) => {
+      if (el.type === "arrow") el.startArrowhead = head;
+    });
+  }
+  setEndArrowhead(head: Arrowhead | null): void {
+    this.controller.currentItem.endArrowhead = head;
+    this.applyToSelection((el) => {
+      if (el.type === "arrow") el.endArrowhead = head;
+    });
+  }
+  /** Arrow type maps onto the standard fields: straight → no roundness,
+   * curved → proportional roundness, elbow → `elbowed` (with rerouting). */
+  setArrowType(type: "straight" | "curved" | "elbow"): void {
+    this.controller.currentItem.arrowCurved = type === "curved";
+    if (type === "elbow") {
+      this.controller.setElbowed(true);
+      this.bump();
+      return;
+    }
+    this.controller.setElbowed(false);
+    const roundness = type === "curved" ? { type: RoundnessType.proportionalRadius } : null;
+    this.applyToSelection((el) => {
+      if (el.type === "arrow" || el.type === "line") el.roundness = roundness;
+    });
+  }
+  setFontFamily(family: number): void {
+    this.controller.currentItem.fontFamily = family;
+    this.controller.updateSelectedText((t) => {
+      t.fontFamily = family;
+    });
+    this.bump();
+  }
+  setFontSize(size: number): void {
+    this.controller.currentItem.fontSize = size;
+    this.controller.updateSelectedText((t) => {
+      t.fontSize = size;
+    });
+    this.bump();
+  }
+  setTextAlign(align: TextAlign): void {
+    this.controller.currentItem.textAlign = align;
+    this.controller.updateSelectedText((t) => {
+      t.textAlign = align;
+    });
     this.bump();
   }
   toggleSnap(): void {

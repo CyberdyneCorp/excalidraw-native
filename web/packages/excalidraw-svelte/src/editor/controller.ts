@@ -776,7 +776,13 @@ export class EditorController {
         element = { ...base, type: type as "rectangle" | "diamond" | "ellipse" };
         break;
     }
-    if (this.currentItem.roundEdges) {
+    // Shapes take roundness from the edges toggle; linear elements from the
+    // arrow-type control (straight vs curved) — excalidraw keeps them separate.
+    if (type === "line" || type === "arrow") {
+      if (this.currentItem.arrowCurved) {
+        element.roundness = { type: RoundnessType.proportionalRadius };
+      }
+    } else if (this.currentItem.roundEdges) {
       const roundness = roundnessType(type);
       if (roundness !== null) element.roundness = { type: roundness };
     }
@@ -1265,6 +1271,7 @@ export class EditorController {
       ...defaultTextProps({
         fontSize: fontSize ?? this.currentItem.fontSize,
         fontFamily: this.currentItem.fontFamily,
+        textAlign: this.currentItem.textAlign,
       }),
     };
     this.store.modifyScene((scene) => scene.add(el));

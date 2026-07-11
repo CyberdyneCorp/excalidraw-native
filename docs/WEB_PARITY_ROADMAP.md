@@ -60,10 +60,12 @@ bindings work for arrows). This was host/controller wiring.
 
 1. **Dark-theme element inversion** — ✅ done early, shipped with Phase 1
    (`themeColor` paint-time mapping in the renderer).
-2. **Contextual properties panel** — swatch palettes for stroke/background,
-   stroke width presets, stroke style (solid/dashed/dotted), sloppiness, edges
-   (sharp/round), opacity, font family/size/align, arrow type
-   (straight/curved/elbow) + arrowheads; sections shown per selection/tool.
+2. **Contextual properties panel** — ✅ implemented via the
+   `web-style-panel-parity` change (2026-07-10): swatch palettes for
+   stroke/background, stroke width presets, stroke style, sloppiness, edges,
+   opacity, font family/size/align, arrow type (straight/curved/elbow) +
+   arrowheads; sections shown per selection/tool, controls reflect the
+   selection.
 3. **Context menu parity** — cut/copy/paste, copy as PNG/SVG, copy/paste
    styles, flip H/V, 4-step z-order (fwd/back/front/bottom), lock, add link,
    wrap in frame; distinct empty-canvas menu (paste, select all, zoom to fit).
