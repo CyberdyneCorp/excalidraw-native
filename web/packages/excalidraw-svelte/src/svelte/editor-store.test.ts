@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Point } from "../math/index.js";
 import { FontFamily, RoundnessType } from "../model/index.js";
-import { Viewport } from "../render/index.js";
+import { Viewport, embedScene } from "../render/index.js";
 import { EditorStore } from "./editor-store.js";
 
 /** A recording 2D context that counts draw calls. */
@@ -349,6 +349,92 @@ describe("EditorStore", () => {
     const rect = store.scene.visibleElements.find((e) => e.type === "rectangle")!;
     expect(rect.fillStyle).toBe("cross-hatch");
     expect(store.controller.currentItem.fillStyle).toBe("cross-hatch");
+  });
+});
+
+const pngAscii = (t: string) => [...t].map((c) => c.charCodeAt(0));
+/** A minimal valid PNG (signature + IHDR + IEND) to host an embedded scene. */
+function minimalPng(): Uint8Array {
+  const ihdrData = [0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]; // 1x1 RGBA
+  return Uint8Array.from([
+    0x89,
+    0x50,
+    0x4e,
+    0x47,
+    0x0d,
+    0x0a,
+    0x1a,
+    0x0a,
+    0,
+    0,
+    0,
+    13,
+    ...pngAscii("IHDR"),
+    ...ihdrData,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    ...pngAscii("IEND"),
+    0,
+    0,
+    0,
+    0,
+  ]);
+}
+
+describe("app chrome store passthroughs", () => {
+  it("tool lock keeps the drawing tool active across creations", () => {
+    const store = new EditorStore();
+    store.toggleToolLock();
+    expect(store.toolLocked).toBe(true);
+    store.selectTool("rectangle");
+    for (const x of [10, 200]) {
+      store.pointer("down", new Point(x, 10));
+      store.pointer("move", new Point(x + 60, 60));
+      store.pointer("up", new Point(x + 60, 60));
+    }
+    expect(store.scene.visibleElements).toHaveLength(2);
+    expect(store.activeTool).toBe("rectangle"); // no revert while locked
+    store.toggleToolLock();
+    store.pointer("down", new Point(400, 10));
+    store.pointer("move", new Point(460, 60));
+    store.pointer("up", new Point(460, 60));
+    expect(store.activeTool).toBe("selection"); // revert restored
+  });
+
+  it("resetScene clears everything as one undoable step", () => {
+    const store = new EditorStore();
+    store.selectTool("rectangle");
+    store.pointer("down", new Point(10, 10));
+    store.pointer("move", new Point(80, 80));
+    store.pointer("up", new Point(80, 80));
+    store.resetScene();
+    expect(store.scene.visibleElements).toHaveLength(0);
+    store.undo();
+    expect(store.scene.visibleElements).toHaveLength(1);
+  });
+
+  it("openPngScene round-trips a scene through PNG bytes and rejects plain PNGs", () => {
+    const store = new EditorStore();
+    store.selectTool("rectangle");
+    store.pointer("down", new Point(10, 10));
+    store.pointer("move", new Point(80, 80));
+    store.pointer("up", new Point(80, 80));
+
+    const png = minimalPng();
+    const embedded = embedScene(store.scene, png);
+    expect(embedded).not.toBeNull();
+
+    const restored = new EditorStore();
+    expect(restored.openPngScene(png)).toBe(false); // no scene chunk
+    expect(restored.openPngScene(embedded!)).toBe(true);
+    expect(restored.scene.visibleElements).toHaveLength(1);
+    expect(restored.scene.visibleElements[0]!.type).toBe("rectangle");
   });
 });
 

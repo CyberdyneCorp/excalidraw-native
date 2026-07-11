@@ -103,6 +103,21 @@ describe("dark-theme scene rendering", () => {
     expect(dark.strokes).not.toContain("#1e1e1e");
   });
 
+  it("the background override paints a custom colour or nothing at all", () => {
+    const scene = new Scene([rect({ x: 10, y: 10, w: 100, h: 80 })]);
+    const custom = new StyleRecorder();
+    renderScene(custom, scene, { ...opts("light"), background: "#123456" });
+    expect(custom.fills[0]).toBe("#123456");
+
+    const transparent = new StyleRecorder();
+    const fillRects: number[] = [];
+    transparent.fillRect = () => {
+      fillRects.push(1);
+    };
+    renderScene(transparent, scene, { ...opts("light"), background: "transparent" });
+    expect(fillRects).toHaveLength(0); // no background fill at all
+  });
+
   it("keeps light-theme painting canonical and never mutates the model", () => {
     const scene = new Scene([rect({ x: 10, y: 10, w: 100, h: 80 })]);
     const light = new StyleRecorder();

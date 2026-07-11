@@ -70,7 +70,14 @@ bindings work for arrows). This was host/controller wiring.
    styles, flip H/V, 4-step z-order (fwd/back/front/bottom), lock, add link,
    wrap in frame; distinct empty-canvas menu (paste, select all, zoom to fit).
 
-## Phase 3 — App chrome & flows (P2)
+## Phase 3 — App chrome & flows (P2) — ✅ implemented
+
+Shipped via the `web-app-chrome` change (2026-07-11): tool lock, app menu
+(open/save/export/reset/theme/help), export-image dialog (PNG/SVG, scale,
+background, selection-only, embed), PNG scene-embed round-trip, welcome
+screen, and the help overlay. The icon toolbar + shortcut badges + hint line
+landed earlier with Phase 1.
+
 
 1. **Icon toolbar** with shortcut number badges, contextual hint line under the
    toolbar, and tool lock ("keep tool active").

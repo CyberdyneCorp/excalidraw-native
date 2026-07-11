@@ -7,11 +7,21 @@ import { type AwarenessLike, YjsCollab } from "@cyberdynecorp/excalidraw-yjs";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 import Canvas from "./lib/Canvas.svelte";
+import { type ExportImageOptions, download, exportPngBytes, exportSvgString } from "./lib/export-image";
 import { BroadcastChannelProvider } from "./lib/yjs-broadcast-provider";
 
 const store = new EditorStore();
-// Expose the store for end-to-end tests to assert against the scene.
+// Expose the store (and the export pipeline) for end-to-end tests.
 (window as unknown as { __store?: EditorStore }).__store = store;
+(window as unknown as { __exportPng?: () => Promise<Uint8Array | null> }).__exportPng = () => {
+  const { format: _f, ...opts } = exportOpts;
+  return exportPngBytes(store, opts);
+};
+(
+  window as unknown as {
+    __exportPngWith?: (o: ExportImageOptions) => Promise<Uint8Array | null>;
+  }
+).__exportPngWith = (o: ExportImageOptions) => exportPngBytes(store, o);
 
 // Auto-join a collaboration room from the URL: ?relay=ws://…&room=…&name=…
 const params = new URLSearchParams(location.search);
@@ -77,6 +87,8 @@ const view = $derived.by(() => {
     selectedCount: store.selectedCount,
     canGroup: store.canGroupSelection,
     canUngroup: store.canUngroupSelection,
+    locked: store.toolLocked,
+    empty: store.scene.visibleElements.length === 0,
   };
 });
 
@@ -157,6 +169,18 @@ const sel = $derived.by(() => {
 });
 // The "more tools" dropdown (extra tools + generators), excalidraw-style.
 let moreOpen = $state(false);
+// App menu (file flows), export dialog, and help overlay.
+let appMenuOpen = $state(false);
+let helpOpen = $state(false);
+let exportOpen = $state(false);
+let openError = $state<string | null>(null);
+let exportOpts = $state<ExportImageOptions & { format: "png" | "svg" }>({
+  format: "png",
+  scale: 1,
+  background: true,
+  selectionOnly: false,
+  embed: true,
+});
 
 // Right-click context menu over the canvas (scene coords not needed: it acts
 // on the current selection). `null` when hidden.
@@ -212,6 +236,9 @@ const icons: Record<string, string> = {
     '<path d="M5.5 5v5M5.5 14v5M12 5v2.5M12 11.5V19M18.5 5v8M18.5 17v2"/><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="9.5" r="1.6"/><circle cx="18.5" cy="15" r="1.6"/>',
   ),
   chevronLeft: svg('<path d="M14.5 6 9 12l5.5 6"/>'),
+  menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  lockOpen: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.5-1.9"/>'),
+  lockClosed: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'),
   shapes: svg(
     '<rect x="4" y="4" width="8.5" height="8.5" rx="1.5"/><circle cx="16" cy="16" r="4.5"/><path d="M16 4.5v6M13 7.5h6"/>',
   ),
@@ -231,6 +258,7 @@ const toolDefs: { tool: Tool; badge: string; title: string }[] = [
 ];
 
 let fileInput: HTMLInputElement;
+let sceneInput: HTMLInputElement;
 
 function importImage(e: Event): void {
   const file = (e.currentTarget as HTMLInputElement).files?.[0];
@@ -273,6 +301,49 @@ function downloadJson(): void {
   a.click();
 }
 
+// The welcome overlay shows over an empty canvas with the selection tool.
+const showWelcome = $derived(
+  view.tool === "selection" && view.editing === null && store.scene.visibleElements.length === 0,
+);
+
+function openFile(e: Event): void {
+  const file = (e.currentTarget as HTMLInputElement).files?.[0];
+  (e.currentTarget as HTMLInputElement).value = ""; // allow re-opening the same file
+  if (file === undefined) return;
+  openError = null;
+  const reader = new FileReader();
+  if (file.name.toLowerCase().endsWith(".png")) {
+    reader.onload = () => {
+      const bytes = new Uint8Array(reader.result as ArrayBuffer);
+      if (!store.openPngScene(bytes)) {
+        openError = "That PNG has no embedded scene — export with \u201cEmbed scene\u201d to reopen it.";
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+  reader.onload = () => {
+    try {
+      store.loadDocument(reader.result as string);
+    } catch {
+      openError = "That file isn\u2019t a valid .excalidraw document.";
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function runExport(): Promise<void> {
+  const { format, ...opts } = exportOpts;
+  if (format === "svg") {
+    const svg = exportSvgString(store, opts);
+    if (svg !== null) download("drawing.svg", svg, "image/svg+xml");
+  } else {
+    const bytes = await exportPngBytes(store, opts);
+    if (bytes !== null) download("drawing.png", bytes, "image/png");
+  }
+  exportOpen = false;
+}
+
 const mermaidSample =
   "flowchart TD\n  A[Start] --> B{OK?}\n  B -->|Yes| C[Ship]\n  B -->|No| D[Fix]";
 
@@ -305,6 +376,16 @@ const toolKeys: Record<string, Tool> = {
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === "Escape" && menu !== null) {
     closeMenu();
+    return;
+  }
+  if (e.key === "Escape" && (helpOpen || exportOpen || appMenuOpen)) {
+    helpOpen = false;
+    exportOpen = false;
+    appMenuOpen = false;
+    return;
+  }
+  if (e.key === "?" && store.editingText === null) {
+    helpOpen = true;
     return;
   }
   if (e.key === "Escape" && moreOpen) {
@@ -439,6 +520,18 @@ function onKeydown(e: KeyboardEvent): void {
 
   <div class="top-center">
     <div class="island toolbar" role="toolbar" aria-label="Drawing tools">
+      <button
+        class="tool"
+        data-testid="tool-lock"
+        class:active={view.locked}
+        title={view.locked ? "Keep selected tool active after drawing (on)" : "Keep selected tool active after drawing (off)"}
+        aria-label="Keep tool active"
+        aria-pressed={view.locked}
+        onclick={() => store.toggleToolLock()}
+      >
+        {@html view.locked ? icons.lockClosed : icons.lockOpen}
+      </button>
+      <span class="divider"></span>
       {#each toolDefs as t (t.tool)}
         <button
           class="tool"
@@ -743,6 +836,119 @@ function onKeydown(e: KeyboardEvent): void {
     </aside>
   {/if}
 
+  <div class="top-left">
+    <button
+      class="island tool"
+      data-testid="app-menu"
+      title="Menu"
+      aria-label="Menu"
+      aria-expanded={appMenuOpen}
+      onclick={() => {
+        appMenuOpen = !appMenuOpen;
+      }}
+    >
+      {@html icons.menu}
+    </button>
+    {#if appMenuOpen}
+      <button
+        type="button"
+        class="menu-backdrop"
+        aria-label="Close menu"
+        onclick={() => {
+          appMenuOpen = false;
+        }}
+      ></button>
+      <div class="island app-menu" data-testid="app-menu-panel" role="menu">
+        <button class="menu-item" data-testid="menu-open" onclick={() => { appMenuOpen = false; sceneInput.click(); }}>Open…</button>
+        <button class="menu-item" data-testid="menu-save" onclick={() => { appMenuOpen = false; downloadJson(); }}>Save as .excalidraw</button>
+        <button class="menu-item" data-testid="menu-export" onclick={() => { appMenuOpen = false; exportOpen = true; }}>Export image…</button>
+        <div class="ctx-sep"></div>
+        <button class="menu-item" data-testid="menu-reset" onclick={() => { appMenuOpen = false; store.resetScene(); }}>Reset canvas</button>
+        <button class="menu-item" data-testid="menu-theme" onclick={() => { appMenuOpen = false; store.toggleTheme(); }}>{view.theme === "light" ? "Dark theme" : "Light theme"}</button>
+        <button class="menu-item" data-testid="menu-help" onclick={() => { appMenuOpen = false; helpOpen = true; }}>Help <kbd>?</kbd></button>
+      </div>
+    {/if}
+    {#if openError !== null}
+      <div class="island toast" data-testid="open-error" role="alert">{openError}</div>
+    {/if}
+  </div>
+  <input bind:this={sceneInput} type="file" accept=".excalidraw,application/json,.png,image/png" hidden onchange={openFile} />
+
+  {#if showWelcome}
+    <div class="welcome" data-testid="welcome">
+      <h1>Excalidraw&nbsp;native</h1>
+      <p>Pick a tool and start drawing — or press <kbd>?</kbd> for the shortcuts.</p>
+      <p class="dim">Your scene stays in this browser tab; use the menu to save or export it.</p>
+    </div>
+  {/if}
+
+  {#if exportOpen}
+    <button type="button" class="menu-backdrop" aria-label="Close export dialog" onclick={() => { exportOpen = false; }}></button>
+    <div class="island dialog" data-testid="export-dialog" role="dialog" aria-label="Export image">
+      <h3>Export image</h3>
+      <div class="seg">
+        <button class="seg-btn" data-testid="export-format-png" class:active={exportOpts.format === "png"} onclick={() => { exportOpts.format = "png"; }}>PNG</button>
+        <button class="seg-btn" data-testid="export-format-svg" class:active={exportOpts.format === "svg"} onclick={() => { exportOpts.format = "svg"; }}>SVG</button>
+      </div>
+      {#if exportOpts.format === "png"}
+        <div class="seg">
+          {#each [1, 2, 3] as sc (sc)}
+            <button class="seg-btn" data-testid={`export-scale-${sc}`} class:active={exportOpts.scale === sc} onclick={() => { exportOpts.scale = sc as 1 | 2 | 3; }}>{sc}×</button>
+          {/each}
+        </div>
+      {/if}
+      <label class="inline"><input type="checkbox" data-testid="export-background" bind:checked={exportOpts.background} /> Background</label>
+      <label class="inline"><input type="checkbox" data-testid="export-selection" bind:checked={exportOpts.selectionOnly} disabled={view.selectedCount === 0} /> Only selected</label>
+      {#if exportOpts.format === "png"}
+        <label class="inline"><input type="checkbox" data-testid="export-embed" bind:checked={exportOpts.embed} /> Embed scene (reopenable)</label>
+      {/if}
+      <div class="row wrap">
+        <button class="chip" data-testid="export-run" onclick={runExport}>Export</button>
+        <button class="chip" onclick={() => { exportOpen = false; }}>Cancel</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if helpOpen}
+    <button type="button" class="menu-backdrop" aria-label="Close help" onclick={() => { helpOpen = false; }}></button>
+    <div class="island dialog help" data-testid="help-overlay" role="dialog" aria-label="Keyboard shortcuts">
+      <h3>Keyboard shortcuts</h3>
+      <div class="help-cols">
+        <section>
+          <h4>Tools</h4>
+          <ul>
+            <li><kbd>1</kbd> Selection</li>
+            <li><kbd>2</kbd> Rectangle</li>
+            <li><kbd>3</kbd> Diamond</li>
+            <li><kbd>4</kbd> Ellipse</li>
+            <li><kbd>5</kbd> Arrow</li>
+            <li><kbd>6</kbd> Line</li>
+            <li><kbd>7</kbd> Draw</li>
+            <li><kbd>8</kbd> Text</li>
+            <li><kbd>9</kbd> Image · <kbd>0</kbd> Eraser</li>
+            <li><kbd>H</kbd> Hand · <kbd>F</kbd> Frame · <kbd>K</kbd> Laser</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Editing</h4>
+          <ul>
+            <li><kbd>⌘Z</kbd> Undo · <kbd>⇧⌘Z</kbd> Redo</li>
+            <li><kbd>⌘D</kbd> Duplicate · <kbd>⌘A</kbd> Select all</li>
+            <li><kbd>Delete</kbd> Delete selection</li>
+            <li>Double-click a shape to label it</li>
+            <li>Click a shape with the arrow tool to connect</li>
+          </ul>
+          <h4>Canvas</h4>
+          <ul>
+            <li>Middle-drag or hand tool to pan</li>
+            <li>Wheel to zoom · <kbd>?</kbd> for this help</li>
+          </ul>
+        </section>
+      </div>
+      <button class="chip" data-testid="help-close" onclick={() => { helpOpen = false; }}>Close</button>
+    </div>
+  {/if}
+
   <div class="bottom-left">
     <div class="island bar">
       <button class="tool slim" data-testid="zoom-out" title="Zoom out" onclick={() => store.zoomOut()}>−</button>
@@ -766,8 +972,8 @@ function onKeydown(e: KeyboardEvent): void {
     {/if}
     <div class="island bar">
       <button class="tool slim" data-testid="theme" title="Toggle theme" onclick={() => store.toggleTheme()}>{view.theme === "light" ? "🌙" : "☀️"}</button>
-      <button class="chip" data-testid="export-svg" onclick={downloadSvg}>Export SVG</button>
-      <button class="chip" data-testid="save" onclick={downloadJson}>Save</button>
+      <button class="chip" data-testid="export-svg" title="Quick SVG export (see the menu for options)" onclick={downloadSvg}>Export SVG</button>
+      <button class="chip" data-testid="save" title="Save as .excalidraw" onclick={downloadJson}>Save</button>
     </div>
   </div>
 </div>
@@ -1054,6 +1260,70 @@ function onKeydown(e: KeyboardEvent): void {
 
   .peers { padding: 5px 8px; display: inline-flex; gap: 4px; }
   .peer { color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+
+  /* ── app menu, dialogs, welcome, help ───────────────────────────────── */
+  .top-left { position: absolute; top: 16px; left: 16px; z-index: 6; }
+  .app-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 7;
+    display: flex;
+    flex-direction: column;
+    min-width: 210px;
+    padding: 5px;
+  }
+  .app-menu .menu-item { justify-content: flex-start; }
+  .toast {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 7;
+    width: 260px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+  .welcome {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--muted);
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+  }
+  .welcome h1 { margin: 0 0 8px; font-size: 26px; color: var(--ink); letter-spacing: -0.01em; }
+  .welcome p { margin: 2px 0; font-size: 13.5px; }
+  .welcome .dim { opacity: 0.75; }
+  .welcome kbd, .app-menu kbd, .dialog kbd {
+    font: 11px ui-monospace, Menlo, monospace;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+  }
+  .dialog {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 22;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 250px;
+    padding: 16px 18px;
+  }
+  .dialog h3 { margin: 0; font-size: 15px; }
+  .dialog h4 { margin: 0 0 4px; font-size: 11px; color: var(--muted); }
+  .help { min-width: 460px; }
+  .help-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .help ul { margin: 0 0 10px; padding-left: 0; list-style: none; font-size: 12.5px; }
+  .help li { margin: 4px 0; color: var(--ink); }
+  .app-menu .menu-item kbd { margin-left: auto; }
 
   /* ── on-canvas editors & context menu ───────────────────────────────── */
   .text-editor {
