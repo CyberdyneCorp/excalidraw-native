@@ -107,6 +107,10 @@ export class EditorStore {
   externalCursors: { color: string; name: string; x: number; y: number }[] = [];
   /** Interaction-overlay colour overrides (host/embedding configuration). */
   overlayColors: OverlayColors | undefined = undefined;
+  /** Ask the host to repaint (e.g. after the embedder re-themes the overlay). */
+  bumpRevision(): void {
+    this.bump();
+  }
 
   constructor(scene: Scene = new Scene(), viewport: Viewport = new Viewport()) {
     this.controller = new EditorController(scene);
@@ -676,6 +680,54 @@ export class EditorStore {
     this.controller.addTableColumn(group);
     this.reselectTable(group);
     this.bump();
+  }
+
+  /** The table cell under/at an element id (null when it isn't a table cell). */
+  tableCellAt(id: string): { group: string; row: number; col: number } | null {
+    return this.controller.cellIndex(id);
+  }
+
+  /** Insert a row above/below the row containing the cell. */
+  insertTableRow(cellID: string, where: "above" | "below"): void {
+    const group = this.controller.tableGroupID(cellID);
+    if (group === null) return;
+    this.controller.insertTableRow(cellID, where);
+    this.reselectTable(group);
+    this.bump();
+  }
+
+  /** Insert a column left/right of the column containing the cell. */
+  insertTableColumn(cellID: string, where: "left" | "right"): void {
+    const group = this.controller.tableGroupID(cellID);
+    if (group === null) return;
+    this.controller.insertTableColumn(cellID, where);
+    this.reselectTable(group);
+    this.bump();
+  }
+
+  /** Delete the cell's row (cells + labels), closing the gap. */
+  deleteTableRow(cellID: string): void {
+    const group = this.controller.tableGroupID(cellID);
+    if (group === null) return;
+    this.controller.deleteTableRow(cellID);
+    this.reselectTable(group);
+    this.bump();
+  }
+
+  /** Delete the cell's column (cells + labels), closing the gap. */
+  deleteTableColumn(cellID: string): void {
+    const group = this.controller.tableGroupID(cellID);
+    if (group === null) return;
+    this.controller.deleteTableColumn(cellID);
+    this.reselectTable(group);
+    this.bump();
+  }
+
+  canDeleteTableRow(cellID: string): boolean {
+    return this.controller.canDeleteTableRow(cellID);
+  }
+  canDeleteTableColumn(cellID: string): boolean {
+    return this.controller.canDeleteTableColumn(cellID);
   }
 
   /** Re-select the whole table group so the selection grows with new cells. */

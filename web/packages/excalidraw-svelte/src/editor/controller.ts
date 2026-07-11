@@ -1830,6 +1830,142 @@ export class EditorController {
     });
   }
 
+  /** The table's implied grid: sorted distinct column xs and row ys. Tables
+   * carry no row/col fields — the grid is derived from cell geometry, so the
+   * model (and therefore the file format) stays unchanged. */
+  tableGrid(group: string): { columns: number[]; rows: number[] } {
+    const cells = this.tableCells(group);
+    return {
+      columns: [...new Set(cells.map((c) => c.x))].sort((a, b) => a - b),
+      rows: [...new Set(cells.map((c) => c.y))].sort((a, b) => a - b),
+    };
+  }
+
+  /** The row/column index of a table cell, or null when it isn't one. */
+  cellIndex(id: string): { group: string; row: number; col: number } | null {
+    const group = this.tableGroupID(id);
+    const cell = this.scene.element(id);
+    if (group === null || cell === undefined) return null;
+    const { columns, rows } = this.tableGrid(group);
+    const col = columns.indexOf(cell.x);
+    const row = rows.indexOf(cell.y);
+    if (col < 0 || row < 0) return null;
+    return { group, row, col };
+  }
+
+  /** The bound label of a cell, if any. */
+  private cellLabel(cell: ExcalidrawElement): string | null {
+    return cell.boundElements?.find((b) => b.type === "text")?.id ?? null;
+  }
+
+  /** Shift a cell (and its bound label) by `dx`/`dy`. */
+  private shiftCell(scene: Scene, cell: ExcalidrawElement, dx: number, dy: number): void {
+    scene.replace({ ...cell, x: cell.x + dx, y: cell.y + dy });
+    const labelID = this.cellLabel(cell);
+    const label = labelID !== null ? scene.element(labelID) : undefined;
+    if (label !== undefined) scene.replace({ ...label, x: label.x + dx, y: label.y + dy });
+  }
+
+  /** Insert a row above/below the row containing `cellID`. One undo step. */
+  insertTableRow(cellID: string, where: "above" | "below"): void {
+    const index = this.cellIndex(cellID);
+    const target = this.scene.element(cellID);
+    if (index === null || target === undefined) return;
+    const { group } = index;
+    const { columns, rows } = this.tableGrid(group);
+    const at = where === "above" ? index.row : index.row + 1;
+    const y = at < rows.length ? rows[at]! : rows[rows.length - 1]! + target.height;
+    const cells = this.tableCells(group);
+    this.store.transaction((scene) => {
+      // Everything at or below the insertion point moves down one cell height.
+      for (const cell of cells) {
+        if (cell.y >= y) this.shiftCell(scene, cell, 0, target.height);
+      }
+      for (const x of columns) {
+        this.addTableCell(scene, group, x, y, target.width, target.height);
+      }
+    });
+  }
+
+  /** Insert a column left/right of the column containing `cellID`. One undo step. */
+  insertTableColumn(cellID: string, where: "left" | "right"): void {
+    const index = this.cellIndex(cellID);
+    const target = this.scene.element(cellID);
+    if (index === null || target === undefined) return;
+    const { group } = index;
+    const { columns, rows } = this.tableGrid(group);
+    const at = where === "left" ? index.col : index.col + 1;
+    const x = at < columns.length ? columns[at]! : columns[columns.length - 1]! + target.width;
+    const cells = this.tableCells(group);
+    this.store.transaction((scene) => {
+      for (const cell of cells) {
+        if (cell.x >= x) this.shiftCell(scene, cell, target.width, 0);
+      }
+      for (const y of rows) {
+        this.addTableCell(scene, group, x, y, target.width, target.height);
+      }
+    });
+  }
+
+  /** Whether the table still has more than one row / column to delete from. */
+  canDeleteTableRow(cellID: string): boolean {
+    const index = this.cellIndex(cellID);
+    return index !== null && this.tableGrid(index.group).rows.length > 1;
+  }
+  canDeleteTableColumn(cellID: string): boolean {
+    const index = this.cellIndex(cellID);
+    return index !== null && this.tableGrid(index.group).columns.length > 1;
+  }
+
+  /** Delete the row containing `cellID` — cells *and* their labels — closing
+   * the gap. Refused when it is the last row. One undo step. */
+  deleteTableRow(cellID: string): void {
+    const index = this.cellIndex(cellID);
+    const target = this.scene.element(cellID);
+    if (index === null || target === undefined || !this.canDeleteTableRow(cellID)) return;
+    const { group } = index;
+    const y = this.tableGrid(group).rows[index.row]!;
+    const cells = this.tableCells(group);
+    const doomed = cells.filter((c) => c.y === y);
+    const remove = new Set<string>();
+    for (const cell of doomed) {
+      remove.add(cell.id);
+      const label = this.cellLabel(cell);
+      if (label !== null) remove.add(label); // never strand a bound label
+    }
+    this.store.transaction((scene) => {
+      scene.replaceAll(scene.elements.filter((e) => !remove.has(e.id)));
+      for (const cell of cells) {
+        if (cell.y > y && !remove.has(cell.id)) this.shiftCell(scene, cell, 0, -target.height);
+      }
+    });
+    this.selectedIDs = new Set([...this.selectedIDs].filter((id) => !remove.has(id)));
+  }
+
+  /** Delete the column containing `cellID`, with the same rules as the row. */
+  deleteTableColumn(cellID: string): void {
+    const index = this.cellIndex(cellID);
+    const target = this.scene.element(cellID);
+    if (index === null || target === undefined || !this.canDeleteTableColumn(cellID)) return;
+    const { group } = index;
+    const x = this.tableGrid(group).columns[index.col]!;
+    const cells = this.tableCells(group);
+    const doomed = cells.filter((c) => c.x === x);
+    const remove = new Set<string>();
+    for (const cell of doomed) {
+      remove.add(cell.id);
+      const label = this.cellLabel(cell);
+      if (label !== null) remove.add(label);
+    }
+    this.store.transaction((scene) => {
+      scene.replaceAll(scene.elements.filter((e) => !remove.has(e.id)));
+      for (const cell of cells) {
+        if (cell.x > x && !remove.has(cell.id)) this.shiftCell(scene, cell, -target.width, 0);
+      }
+    });
+    this.selectedIDs = new Set([...this.selectedIDs].filter((id) => !remove.has(id)));
+  }
+
   /** Whether `id` belongs to a table. */
   tableGroupID(id: string): string | null {
     const value = this.scene.element(id)?.customData?.table;

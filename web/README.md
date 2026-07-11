@@ -103,7 +103,7 @@ Everything is on by default. Pass `false` to drop a whole section, or an object 
 />
 ```
 
-Sections: `toolbar` (`tools`, `lock`, `image`, `more`), `panel`, `menu` (`open`, `save`, `export`, `reset`, `theme`, `help`), `contextMenu` (`clipboard`, `copyAsImage`, `styles`, `frame`, `shapeRecognition`, `duplicate`, `grouping`, `zOrder`, `flip`, `link`, `lock`, `deletion`), `palette`, `welcome`, `help`, `zoomIsland`, `undoIsland`, `viewIsland`, `quickArrows`, `generators` (`note`, `table`, `chart`, `mermaid`), `quickActions`.
+Sections: `toolbar` (`tools`, `lock`, `image`, `more`), `panel`, `menu` (`open`, `save`, `export`, `reset`, `theme`, `help`), `contextMenu` (`clipboard`, `copyAsImage`, `styles`, `frame`, `table`, `shapeRecognition`, `duplicate`, `grouping`, `zOrder`, `flip`, `link`, `lock`, `deletion`), `palette`, `welcome`, `help`, `zoomIsland`, `undoIsland`, `viewIsland`, `quickArrows`, `generators` (`note`, `table`, `chart`, `mermaid`), `quickActions`.
 
 **Hiding chrome never removes capability** — a hidden export button doesn't stop you calling `store.exportSvg()` from `onReady`.
 
@@ -172,7 +172,7 @@ pnpm build:libs              # tsc → dist (.js + .d.ts) for the library and th
 pnpm publish:libs            # rewrites workspace:* → versions, publishes to the configured registry
 ```
 
-Versions live in each package's `package.json` (currently `0.10.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
+Versions live in each package's `package.json` (currently `0.11.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
 
 ## Develop
 
@@ -501,6 +501,14 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     what was right-clicked, not merely on the selection. New core APIs:
     `styleOf`/`applyStyle`, `wrapSelectionInFrame`, `hitElement`, and store
     clipboard passthroughs; `zoomToFit` landed too.
+  - **Table editing (`web-table-editing`):** right-clicking a table cell now
+    offers **insert row above/below**, **insert column left/right**, **delete
+    row**, and **delete column** — inserting shifts the following rows/columns
+    and gives new cells their own labels; deleting removes the cells *and their
+    bound labels* and closes the gap, refusing to remove the last row/column.
+    Previously the editor could only *append* a row/column ("+ Row" / "+ Col"
+    in the style panel) and had no delete path at all. Gateable for embedders
+    via `uiOptions.contextMenu.table`.
   - **Smart canvas (Phase 4, `web-smart-canvas`):** **flowchart quick-create** —
     `Cmd/Ctrl + ↑↓←→` (and four hover quick-arrow buttons around a selected
     shape) spawns a connected node, building a flowchart without leaving the
