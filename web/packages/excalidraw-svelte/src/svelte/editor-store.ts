@@ -25,8 +25,10 @@ import {
   type Theme,
   Viewport,
   ZOOM_RANGE,
+  containsScene,
   renderOverlay as drawOverlay,
   exportSvg,
+  extractScene,
   renderScene,
 } from "../render/index.js";
 import { CollabSession, type CollabSocket, type RemoteCursor } from "./collab-session.js";
@@ -397,6 +399,33 @@ export class EditorStore {
   toggleSnap(): void {
     this.controller.snapEnabled = !this.controller.snapEnabled;
     this.bump();
+  }
+
+  /** Whether finishing an element keeps the drawing tool active. */
+  get toolLocked(): boolean {
+    return this.controller.toolLocked;
+  }
+  toggleToolLock(): void {
+    this.controller.toolLocked = !this.controller.toolLocked;
+    this.bump();
+  }
+
+  /** Clear the whole scene as one undoable step. */
+  resetScene(): void {
+    this.controller.setTool("selection");
+    this.controller.selectAll();
+    this.controller.deleteSelected();
+    this.bump();
+  }
+
+  /** Open a PNG with an embedded scene; returns whether one was found. */
+  openPngScene(bytes: Uint8Array): boolean {
+    if (!containsScene(bytes)) return false;
+    const scene = extractScene(bytes);
+    if (scene === null) return false;
+    this.controller.load(scene);
+    this.bump();
+    return true;
   }
 
   // MARK: Edit + history

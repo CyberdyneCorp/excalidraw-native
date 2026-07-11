@@ -103,16 +103,19 @@ function group(el: ExcalidrawElement): string {
  * Export a scene to an SVG string, fitting content with padding. (parity:
  * SVGExporter.swift)
  */
-export function exportSvg(scene: Scene, padding = 16): string {
+export function exportSvg(scene: Scene, padding = 16, backgroundOverride?: string): string {
   const box = commonBounds(scene.visibleElements);
   if (box === null) return emptySvg();
   const width = box.width + 2 * padding;
   const height = box.height + 2 * padding;
   const offsetX = padding - box.minX;
   const offsetY = padding - box.minY;
-  const background = viewBackgroundColor(scene.appState) ?? "#ffffff";
+  const background = backgroundOverride ?? viewBackgroundColor(scene.appState) ?? "#ffffff";
 
-  let body = `<rect width="${fmt(width)}" height="${fmt(height)}" fill="${escapeXml(background)}"/>\n`;
+  let body =
+    background === "transparent"
+      ? ""
+      : `<rect width="${fmt(width)}" height="${fmt(height)}" fill="${escapeXml(background)}"/>\n`;
   for (const el of scene.visibleElements) body += `${group(el)}\n`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${fmt(width)}" height="${fmt(height)}" viewBox="0 0 ${fmt(width)} ${fmt(height)}">

@@ -47,6 +47,9 @@ export interface RenderOptions {
   width: number;
   height: number;
   theme?: Theme;
+  /** Export override: `"transparent"` skips the background fill entirely; any
+   * other value replaces the scene/theme background for this pass only. */
+  background?: string;
   gridSize?: number;
   /** Resolve a loaded bitmap for an image element's `fileId`. The host owns the
    * (async) image cache and redraws once a bitmap finishes loading; images whose
@@ -230,8 +233,11 @@ function visibleRegion(opts: RenderOptions): BoundingBox {
  */
 export function renderScene(ctx: RenderContext, scene: Scene, opts: RenderOptions): void {
   const theme = opts.theme ?? "light";
-  ctx.fillStyle = backgroundColor(scene, theme);
-  ctx.fillRect(0, 0, opts.width, opts.height);
+  const bg = opts.background ?? backgroundColor(scene, theme);
+  if (bg !== "transparent") {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, opts.width, opts.height);
+  }
 
   ctx.save();
   ctx.scale(opts.viewport.zoom, opts.viewport.zoom);

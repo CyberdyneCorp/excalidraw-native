@@ -82,7 +82,7 @@ pnpm build:libs              # tsc → dist (.js + .d.ts) for the library and th
 pnpm publish:libs            # rewrites workspace:* → versions, publishes to the configured registry
 ```
 
-Versions live in each package's `package.json` (currently `0.8.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
+Versions live in each package's `package.json` (currently `0.9.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
 
 ## Develop
 
@@ -389,3 +389,13 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     setters (`setArrowType`, `setStart/EndArrowhead`, `setFontFamily/Size`,
     `setTextAlign`) write only standard fields, so files and collab are
     unaffected.
+  - **App chrome & flows (Phase 3, `web-app-chrome`):** a **tool lock** toggle
+    (keep the tool active after drawing), an **app menu** (Open… — `.excalidraw`
+    *and* PNGs with an embedded scene — Save, Export image…, Reset canvas,
+    theme, Help), an **export-image dialog** (PNG/SVG, 1×/2×/3×, background
+    on/off for transparent exports, selection-only, and **embed scene** so an
+    exported PNG reopens as an editable document — the excalidraw-compatible
+    `tEXt` codec, so those PNGs also open on excalidraw.com), a **welcome
+    screen** on an empty canvas, and a **help overlay** (`?`) with the shortcut
+    map. The renderer gained an export-only background override
+    (`RenderOptions.background`), paint-time only.
