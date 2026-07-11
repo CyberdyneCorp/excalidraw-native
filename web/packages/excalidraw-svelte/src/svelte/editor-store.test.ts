@@ -387,6 +387,98 @@ function minimalPng(): Uint8Array {
   ]);
 }
 
+describe("table row & column editing", () => {
+  /** A 3x3 table; returns cell/label accessors plus a lookup by (row, col). */
+  function table(store: EditorStore) {
+    store.insertTable(3, 3);
+    const cells = () =>
+      store.scene.visibleElements
+        .filter((e) => e.type === "rectangle")
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+    const labels = () => store.scene.visibleElements.filter((e) => e.type === "text");
+    const at = (row: number, col: number) => {
+      const grid = cells();
+      const xs = [...new Set(grid.map((c) => c.x))].sort((a, b) => a - b);
+      const ys = [...new Set(grid.map((c) => c.y))].sort((a, b) => a - b);
+      return grid.find((c) => c.x === xs[col] && c.y === ys[row])!;
+    };
+    return { cells, labels, at };
+  }
+
+  it("inserts a row above, shifting the rows below down", () => {
+    const store = new EditorStore();
+    const t = table(store);
+    expect(t.cells()).toHaveLength(9);
+    const middle = t.at(1, 0);
+    const belowBefore = t.at(2, 0).y;
+
+    store.insertTableRow(middle.id, "above");
+    expect(t.cells()).toHaveLength(12); // 4 rows x 3 cols
+    expect(t.labels()).toHaveLength(12); // every new cell got a label
+    expect(t.at(3, 0).y).toBeCloseTo(belowBefore + middle.height, 5);
+
+    store.undo();
+    expect(t.cells()).toHaveLength(9);
+  });
+
+  it("inserts a column to the right of the clicked cell", () => {
+    const store = new EditorStore();
+    const t = table(store);
+    store.insertTableColumn(t.at(0, 1).id, "right");
+    expect(t.cells()).toHaveLength(12); // 3 rows x 4 cols
+    expect([...new Set(t.cells().map((c) => c.x))]).toHaveLength(4);
+  });
+
+  it("deletes a row with its labels and closes the gap", () => {
+    const store = new EditorStore();
+    const t = table(store);
+    const middle = t.at(1, 0);
+    const lastRowY = t.at(2, 0).y;
+
+    store.deleteTableRow(middle.id);
+    expect(t.cells()).toHaveLength(6); // 2 rows x 3 cols
+    expect(t.labels()).toHaveLength(6); // no orphan labels left behind
+    expect(t.at(1, 0).y).toBeCloseTo(lastRowY - middle.height, 5);
+
+    store.undo();
+    expect(t.cells()).toHaveLength(9);
+    expect(t.labels()).toHaveLength(9);
+  });
+
+  it("deletes a column with its labels", () => {
+    const store = new EditorStore();
+    const t = table(store);
+    store.deleteTableColumn(t.at(0, 1).id);
+    expect(t.cells()).toHaveLength(6); // 3 rows x 2 cols
+    expect(t.labels()).toHaveLength(6);
+  });
+
+  it("refuses to delete the last row or column", () => {
+    const store = new EditorStore();
+    store.insertTable(1, 1);
+    const cell = store.scene.visibleElements.find((e) => e.type === "rectangle")!;
+    expect(store.canDeleteTableRow(cell.id)).toBe(false);
+    expect(store.canDeleteTableColumn(cell.id)).toBe(false);
+
+    store.deleteTableRow(cell.id);
+    store.deleteTableColumn(cell.id);
+    expect(store.scene.visibleElements.filter((e) => e.type === "rectangle")).toHaveLength(1);
+  });
+
+  it("tableCellAt reports the row/column index, and null off-table", () => {
+    const store = new EditorStore();
+    const t = table(store);
+    expect(store.tableCellAt(t.at(2, 1).id)).toMatchObject({ row: 2, col: 1 });
+
+    store.selectTool("rectangle");
+    store.pointer("down", new Point(900, 900));
+    store.pointer("move", new Point(960, 960));
+    store.pointer("up", new Point(960, 960));
+    const plain = store.scene.visibleElements.find((e) => e.x >= 900)!;
+    expect(store.tableCellAt(plain.id)).toBeNull();
+  });
+});
+
 describe("smart canvas", () => {
   function drawRect(store: EditorStore, x = 100, y = 100) {
     store.selectTool("rectangle");

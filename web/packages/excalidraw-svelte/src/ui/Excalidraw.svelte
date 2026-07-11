@@ -55,12 +55,26 @@ const {
 
 const store = new EditorStore();
 const ui = $derived(resolveUIOptions(uiOptions));
+// `false` means "section off"; these give the markup a narrowed object or null.
+const toolbarOpts = $derived(ui.toolbar === false ? null : ui.toolbar);
+const menuOpts = $derived(ui.menu === false ? null : ui.menu);
+const ctxOpts = $derived(ui.contextMenu === false ? null : ui.contextMenu);
+const genOpts = $derived(ui.generators === false ? null : ui.generators);
 
+// `initialData` is deliberately a mount-time prop: the scene is loaded once,
+// after which the store owns it (a live-updating document would fight the user).
+// svelte-ignore state_referenced_locally
 if (initialData !== undefined) {
   if (typeof initialData === "string") store.loadDocument(initialData);
   else store.controller.load(initialData);
 }
-if (overlayColors !== undefined) store.overlayColors = overlayColors;
+// Overlay colours stay live: a host may re-theme at any time.
+$effect(() => {
+  store.overlayColors = overlayColors;
+  store.bumpRevision();
+});
+// `onReady` hands over the store exactly once, on mount.
+// svelte-ignore state_referenced_locally
 onReady?.(store);
 
 // Host-controlled props stay in sync with store state.
@@ -233,7 +247,9 @@ const exportOpts = $state<ExportImageOptions & { format: "png" | "svg" }>({
 
 // Right-click context menu over the canvas (scene coords not needed: it acts
 // on the current selection). `null` when hidden.
-let menu = $state<{ x: number; y: number; onElement: boolean } | null>(null);
+let menu = $state<{ x: number; y: number; onElement: boolean; cellID: string | null } | null>(null);
+/** The table cell under the right-click, if any — the table commands act on it. */
+const menuCell = $derived(menu?.cellID ?? null);
 function openMenu(e: MouseEvent): void {
   e.preventDefault();
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -252,7 +268,8 @@ function openMenu(e: MouseEvent): void {
     scene.x <= bounds.maxX &&
     scene.y >= bounds.minY &&
     scene.y <= bounds.maxY;
-  menu = { x: at.x, y: at.y, onElement: hit !== null || inSelection };
+  const cellID = hit !== null && store.tableCellAt(hit) !== null ? hit : null;
+  menu = { x: at.x, y: at.y, onElement: hit !== null || inSelection, cellID };
 }
 function closeMenu(): void {
   menu = null;
@@ -326,9 +343,7 @@ const allToolDefs: { tool: Tool; badge: string; title: string }[] = [
 ];
 
 const visibleTools = $derived(
-  ui.toolbar === false
-    ? []
-    : allToolDefs.filter((t) => (ui.toolbar as { tools: Tool[] }).tools.includes(t.tool)),
+  toolbarOpts === null ? [] : allToolDefs.filter((t) => toolbarOpts.tools.includes(t.tool)),
 );
 
 let fileInput: HTMLInputElement;
@@ -892,7 +907,7 @@ function onKeydown(e: KeyboardEvent): void {
         <button class="chip" onclick={() => store.cancelChart()}>Cancel</button>
       </div>
     {/if}
-    {#if menu !== null && ui.contextMenu !== false}
+    {#if menu !== null && ctxOpts !== null}
       <button
         type="button"
         class="ctx-backdrop"
@@ -918,6 +933,16 @@ function onKeydown(e: KeyboardEvent): void {
           <div class="ctx-sep"></div>
           <button data-testid="ctx-copy-styles" onclick={() => runMenu(() => store.copyStyles())}>Copy styles</button>
           <button data-testid="ctx-paste-styles" disabled={!store.hasCopiedStyles} onclick={() => runMenu(() => store.pasteStyles())}>Paste styles</button>
+          {#if menuCell !== null && ctxOpts !== null && ctxOpts.table}
+            <div class="ctx-sep"></div>
+            <button data-testid="ctx-row-above" onclick={() => runMenu(() => store.insertTableRow(menuCell, "above"))}>Insert row above</button>
+            <button data-testid="ctx-row-below" onclick={() => runMenu(() => store.insertTableRow(menuCell, "below"))}>Insert row below</button>
+            <button data-testid="ctx-col-left" onclick={() => runMenu(() => store.insertTableColumn(menuCell, "left"))}>Insert column left</button>
+            <button data-testid="ctx-col-right" onclick={() => runMenu(() => store.insertTableColumn(menuCell, "right"))}>Insert column right</button>
+            <button data-testid="ctx-row-delete" disabled={!store.canDeleteTableRow(menuCell)} onclick={() => runMenu(() => store.deleteTableRow(menuCell))}>Delete row</button>
+            <button data-testid="ctx-col-delete" disabled={!store.canDeleteTableColumn(menuCell)} onclick={() => runMenu(() => store.deleteTableColumn(menuCell))}>Delete column</button>
+            <div class="ctx-sep"></div>
+          {/if}
           <button data-testid="ctx-wrap-frame" onclick={() => runMenu(() => store.wrapSelectionInFrame())}>Wrap selection in frame</button>
           <button data-testid="ctx-snap-shape" onclick={() => runMenu(() => store.recognizeSelectedStroke())}>Snap to shape</button>
           <div class="ctx-sep"></div>
@@ -942,10 +967,10 @@ function onKeydown(e: KeyboardEvent): void {
     {/if}
   </main>
 
-  {#if !view.zen && ui.toolbar !== false}
+  {#if !view.zen && toolbarOpts !== null}
   <div class="top-center">
     <div class="island toolbar" role="toolbar" aria-label="Drawing tools">
-      {#if ui.toolbar !== false && ui.toolbar.lock}
+      {#if toolbarOpts !== null && toolbarOpts.lock}
       <button
         class="tool"
         data-testid="tool-lock"
@@ -973,14 +998,14 @@ function onKeydown(e: KeyboardEvent): void {
           <span class="badge">{t.badge}</span>
         </button>
       {/each}
-      {#if ui.toolbar !== false && ui.toolbar.image}
+      {#if toolbarOpts !== null && toolbarOpts.image}
       <span class="divider"></span>
       <button class="tool" data-testid="gen-image" title="Insert image — 9" aria-label="Insert image — 9" onclick={() => fileInput.click()}>
         {@html icons.image}
         <span class="badge">9</span>
       </button>
       {/if}
-      {#if ui.toolbar !== false && ui.toolbar.more}
+      {#if toolbarOpts !== null && toolbarOpts.more}
       <button
         class="tool"
         data-testid="more-tools"
@@ -1010,7 +1035,7 @@ function onKeydown(e: KeyboardEvent): void {
           <button class="menu-item" data-testid="tool-laser" class:active={view.tool === "laser"} onclick={() => { pick("laser"); moreOpen = false; }}>
             <span class="mi-icon">{@html icons.laser}</span>Laser pointer<kbd>K</kbd>
           </button>
-          {#if ui.generators !== false}
+          {#if genOpts !== null}
           <div class="menu-head">Generate</div>
           <button class="menu-item" data-testid="gen-note" onclick={() => { store.insertStickyNote(); moreOpen = false; }}>
             <span class="mi-icon">{@html icons.note}</span>Sticky note
@@ -1271,7 +1296,7 @@ function onKeydown(e: KeyboardEvent): void {
     </aside>
   {/if}
 
-  {#if !view.zen && ui.menu !== false}
+  {#if !view.zen && menuOpts !== null}
   <div class="top-left">
     <button
       class="island tool"
@@ -1295,23 +1320,23 @@ function onKeydown(e: KeyboardEvent): void {
         }}
       ></button>
       <div class="island app-menu" data-testid="app-menu-panel" role="menu">
-        {#if ui.menu !== false && ui.menu.open}
+        {#if menuOpts !== null && menuOpts.open}
         <button class="menu-item" data-testid="menu-open" onclick={() => { appMenuOpen = false; sceneInput.click(); }}>Open…</button>
         {/if}
-        {#if ui.menu !== false && ui.menu.save}
+        {#if menuOpts !== null && menuOpts.save}
         <button class="menu-item" data-testid="menu-save" onclick={() => { appMenuOpen = false; downloadJson(); }}>Save as .excalidraw</button>
         {/if}
-        {#if ui.menu !== false && ui.menu.export}
+        {#if menuOpts !== null && menuOpts.export}
         <button class="menu-item" data-testid="menu-export" onclick={() => { appMenuOpen = false; exportOpen = true; }}>Export image…</button>
         {/if}
         <div class="ctx-sep"></div>
-        {#if ui.menu !== false && ui.menu.reset}
+        {#if menuOpts !== null && menuOpts.reset}
         <button class="menu-item" data-testid="menu-reset" onclick={() => { appMenuOpen = false; store.resetScene(); }}>Reset canvas</button>
         {/if}
-        {#if ui.menu !== false && ui.menu.theme}
+        {#if menuOpts !== null && menuOpts.theme}
         <button class="menu-item" data-testid="menu-theme" onclick={() => { appMenuOpen = false; store.toggleTheme(); }}>{view.theme === "light" ? "Dark theme" : "Light theme"}</button>
         {/if}
-        {#if ui.menu !== false && ui.menu.help}
+        {#if menuOpts !== null && menuOpts.help}
         <button class="menu-item" data-testid="menu-help" onclick={() => { appMenuOpen = false; helpOpen = true; }}>Help <kbd>?</kbd></button>
         {/if}
       </div>

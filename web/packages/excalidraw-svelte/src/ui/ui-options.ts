@@ -17,6 +17,7 @@ export interface ContextMenuOptions {
   copyAsImage?: boolean; // copy as PNG/SVG
   styles?: boolean; // copy/paste styles
   frame?: boolean; // wrap in frame
+  table?: boolean; // insert/delete table rows and columns
   shapeRecognition?: boolean; // snap to shape
   duplicate?: boolean;
   grouping?: boolean;
@@ -110,6 +111,7 @@ const defaultContextMenu: Required<ContextMenuOptions> = {
   copyAsImage: true,
   styles: true,
   frame: true,
+  table: true,
   shapeRecognition: true,
   duplicate: true,
   grouping: true,
