@@ -38,13 +38,7 @@ context menu. (src: web/apps/web/src/lib/Canvas.svelte, web/packages/excalidraw-
 
 ### Requirement: Selection context menu
 
-The web canvas SHALL open a context menu on right-click offering Duplicate,
-Group, Ungroup, Bring to front, Send to back, Select all, and Delete. The
-selection-dependent items SHALL be disabled when not applicable — Group only
-with two or more selected elements, Ungroup only when the selection contains a
-grouped element, and Duplicate/reorder/Delete only with a non-empty selection.
-Choosing an item SHALL run the action and close the menu; clicking outside or
-pressing Escape SHALL dismiss it. (src: web/apps/web/src/App.svelte, web/packages/excalidraw-svelte/src/svelte/editor-store.ts)
+The web canvas SHALL open a context menu on right-click. Over a selection it SHALL offer: Cut, Copy, Paste, Copy to clipboard as PNG, Copy as SVG, Copy styles, Paste styles, Wrap selection in frame, Duplicate, Group, Ungroup, Send backward, Bring forward, Send to back, Bring to front, Flip horizontal, Flip vertical, Add link, Lock, Select all, and Delete. Over empty canvas it SHALL offer a shorter menu: Paste, Select all, and Zoom to fit. Selection-dependent items SHALL be disabled when not applicable — Group only with two or more selected elements, Ungroup only when the selection contains a grouped element, Paste styles only when styles have been copied, and the selection commands only with a non-empty selection. Choosing an item SHALL run the action and close the menu; clicking outside or pressing Escape SHALL dismiss it. (src: web/apps/web/src/App.svelte, web/packages/excalidraw-svelte/src/svelte/editor-store.ts)
 
 #### Scenario: Group, ungroup, and delete via the menu
 - GIVEN two selected elements
@@ -56,8 +50,19 @@ pressing Escape SHALL dismiss it. (src: web/apps/web/src/App.svelte, web/package
 #### Scenario: Menu items gate on the selection
 - GIVEN no selection
 - WHEN the context menu is shown
-- THEN Group, Ungroup, Duplicate, reorder, and Delete SHALL be disabled while
-  Select all remains available (src: web/apps/web/src/App.svelte)
+- THEN the selection commands (Group, Ungroup, Duplicate, reorder, flip, lock,
+  link, Delete) SHALL be disabled or absent while Select all and Paste remain
+  available (src: web/apps/web/src/App.svelte)
+
+#### Scenario: The empty-canvas menu is the short one
+- WHEN the user right-clicks empty canvas with nothing selected
+- THEN the menu SHALL offer Paste, Select all, and Zoom to fit, and SHALL NOT
+  offer the element commands
+
+#### Scenario: Four-step z-order
+- GIVEN three stacked elements with the middle one selected
+- WHEN the user chooses Bring forward, then Send to back
+- THEN the element SHALL move one step up in the z-order, then to the bottom
 
 ### Requirement: Double-click creates or edits a container label
 
@@ -256,4 +261,94 @@ Pressing `?` (or choosing Help in the menu) SHALL open an overlay listing the ke
 #### Scenario: Help opens and closes
 - **WHEN** the user presses `?` and then Escape
 - **THEN** the shortcut overlay SHALL appear (listing at least the tool digits 1–8) and then close, leaving the scene untouched
+
+### Requirement: Clipboard cut, copy, and paste
+
+The client SHALL support Cut (⌘/Ctrl+X), Copy (⌘/Ctrl+C), and Paste (⌘/Ctrl+V) from the keyboard and the context menu, over the system clipboard. Copy and Cut SHALL write the selection as an `.excalidraw` payload (the existing file format, so the clipboard interoperates with excalidraw.com); Cut SHALL then delete the selection as one undoable step. Paste SHALL accept: an `.excalidraw` payload (elements re-id'd, offset, and selected), an **image file** (inserted as an image element), and **plain text** (inserted as a text element). Pasted content SHALL land at the last pointer position on the canvas. Clipboard shortcuts SHALL NOT fire while a text editor is open (the editor's own clipboard handling applies).
+
+#### Scenario: Copy and paste round-trip
+- **WHEN** the user selects two elements, copies, and pastes
+- **THEN** two new elements SHALL be added (distinct ids), offset from the
+  originals and left selected, with the originals unchanged
+
+#### Scenario: Cut removes the selection in one undo step
+- **WHEN** the user cuts a selected element and presses undo
+- **THEN** the element SHALL be gone after the cut and restored by the undo
+
+#### Scenario: Pasting external content
+- **WHEN** the clipboard holds a PNG image, and separately plain text
+- **THEN** pasting SHALL create an image element sized to the bitmap, and a
+  text element carrying the text, respectively
+
+### Requirement: Copy as image
+
+The context menu SHALL offer "Copy to clipboard as PNG" and "Copy as SVG": the first SHALL write a PNG of the selection (or the whole scene when nothing is selected) to the clipboard as an image blob, the second SHALL write the SVG source as text. Both SHALL use canonical (light-theme) colours.
+
+#### Scenario: PNG lands on the clipboard
+- **WHEN** the user selects a shape and chooses "Copy to clipboard as PNG"
+- **THEN** the clipboard SHALL hold a PNG image of that shape
+
+### Requirement: Copy and paste styles
+
+The context menu SHALL offer "Copy styles" (capturing the first selected element's style properties: stroke colour, background, fill style, stroke width, stroke style, roughness, roundness, opacity, font family/size/alignment, and arrowheads) and "Paste styles" (applying the captured style to every selected element as one undoable step). "Paste styles" SHALL be disabled until a style has been copied.
+
+#### Scenario: Style transfers between shapes
+- **WHEN** the user copies the styles of a red dashed rectangle, selects a
+  plain ellipse, and pastes styles
+- **THEN** the ellipse SHALL take the red dashed stroke (and the other copied
+  properties), and undo SHALL restore its previous style
+
+### Requirement: Flowchart quick-create
+
+With exactly one bindable shape selected, pressing `Cmd/Ctrl` + an arrow key SHALL create a new node of the same kind offset in that direction, connected to the source by a bound arrow, and select the new node — so a flowchart can be built without leaving the keyboard. Hovering a selected shape SHALL additionally show four quick-arrow buttons (one per side); clicking one SHALL perform the same spawn in that direction.
+
+#### Scenario: Keyboard spawns a connected node
+- **WHEN** a rectangle is selected and the user presses Cmd/Ctrl+Right
+- **THEN** a second rectangle SHALL appear to its right, an arrow SHALL connect
+  the two (bound at both ends), and the new rectangle SHALL be selected
+
+#### Scenario: Quick-arrow button spawns downward
+- **WHEN** a selected shape's bottom quick-arrow button is clicked
+- **THEN** a connected node SHALL be created below it
+
+### Requirement: Freehand shape recognition
+
+A selected freedraw stroke SHALL offer a "Snap to shape" action (context menu) that replaces it with the recognized primitive (rectangle, ellipse, diamond, line, or arrow) when one is recognized, preserving position and style, as one undoable step; when nothing is recognized the stroke SHALL be left unchanged.
+
+#### Scenario: A rough rectangle snaps to a rectangle
+- **WHEN** the user sketches a rough four-corner loop with the draw tool and
+  chooses "Snap to shape"
+- **THEN** the freedraw element SHALL be replaced by a rectangle element in the
+  same place, and undo SHALL restore the stroke
+
+### Requirement: Canvas navigation helpers
+
+The client SHALL offer: **zoom to fit** (`Shift+1`, the zoom island, and the empty-canvas menu) fitting all content in view; a **scroll-back-to-content** pill shown only when the scene has elements and none of the content bounds intersect the viewport, which recentres the view when clicked; and **grid** and **snap** toggles whose states are visible, where the grid renders behind the scene and snapping guides element moves.
+
+#### Scenario: Scroll-back pill appears and recentres
+- **WHEN** the user draws a shape and then pans until it is off-screen
+- **THEN** the pill SHALL appear, and clicking it SHALL bring the content back
+  into view (the pill SHALL then disappear)
+
+#### Scenario: Grid and snap toggles
+- **WHEN** the user enables the grid and the snap toggle
+- **THEN** the canvas SHALL render a grid and dragging an element SHALL snap it
+  to nearby elements, and disabling both SHALL restore the plain behaviour
+
+### Requirement: Zen mode
+
+`Alt+Z` (and a command-palette entry) SHALL toggle zen mode: all chrome except the canvas and the zoom island SHALL be hidden, while every tool remains usable from the keyboard. Toggling back SHALL restore the chrome.
+
+#### Scenario: Zen mode hides the chrome
+- **WHEN** the user presses Alt+Z
+- **THEN** the toolbar, style panel, and menus SHALL be hidden, drawing with a
+  keyboard-selected tool SHALL still work, and Alt+Z SHALL restore them
+
+### Requirement: Command palette
+
+`Cmd/Ctrl+K` SHALL open a searchable command palette listing tools, generators, view toggles, edit commands, and file flows. Typing SHALL filter the list, Up/Down SHALL move the highlight, Enter SHALL run the highlighted command, and Escape SHALL close the palette. Running a command SHALL have the same effect as invoking it from its menu or shortcut.
+
+#### Scenario: Palette runs a command
+- **WHEN** the user presses Cmd/Ctrl+K, types "rect", and presses Enter
+- **THEN** the palette SHALL close and the rectangle tool SHALL be active
 

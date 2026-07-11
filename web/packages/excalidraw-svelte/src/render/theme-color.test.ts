@@ -118,6 +118,17 @@ describe("dark-theme scene rendering", () => {
     expect(fillRects).toHaveLength(0); // no background fill at all
   });
 
+  it("draws a grid only when a grid size is given", () => {
+    const scene = new Scene([rect({ x: 10, y: 10, w: 100, h: 80 })]);
+    const without = new StyleRecorder();
+    renderScene(without, scene, opts("light"));
+    const withGrid = new StyleRecorder();
+    renderScene(withGrid, scene, { ...opts("light"), gridSize: 20 });
+    // The grid adds its own stroke colour to the pass.
+    expect(without.strokes).not.toContain("#00000012");
+    expect(withGrid.strokes).toContain("#00000012");
+  });
+
   it("keeps light-theme painting canonical and never mutates the model", () => {
     const scene = new Scene([rect({ x: 10, y: 10, w: 100, h: 80 })]);
     const light = new StyleRecorder();

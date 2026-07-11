@@ -1,9 +1,13 @@
 <script lang="ts">
-import type { EditorStore } from "@cyberdynecorp/excalidraw-svelte";
-import type { PointerType } from "@cyberdynecorp/excalidraw-svelte/editor";
-import { Point } from "@cyberdynecorp/excalidraw-svelte/math";
+import type { PointerType } from "../editor/index.js";
+import { Point } from "../math/index.js";
+import type { EditorStore } from "../svelte/editor-store.js";
 
-const { store, rev }: { store: EditorStore; rev: number } = $props();
+const {
+  store,
+  rev,
+  readOnly = false,
+}: { store: EditorStore; rev: number; readOnly?: boolean } = $props();
 
 let canvas: HTMLCanvasElement;
 let wrapper: HTMLDivElement;

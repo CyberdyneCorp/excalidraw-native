@@ -25,9 +25,11 @@ import {
 import { Point } from "../math/index.js";
 import {
   type ArrowElement,
+  type Arrowhead,
   type BaseProperties,
   type BinaryFileData,
   type ExcalidrawElement,
+  type FillStyle,
   type FixedPointBinding,
   type FixedSegment,
   type ImageCrop,
@@ -36,6 +38,8 @@ import {
   RoundnessType,
   Scene,
   Store,
+  type StrokeStyle,
+  type TextAlign,
   type TextElement,
   decodeFile,
   defaultTextProps,
@@ -63,6 +67,24 @@ type Interaction =
   | { kind: "rotating"; center: Point; originals: Originals };
 
 export type ZOrder = "front" | "back" | "forward" | "backward";
+
+/** A captured element style (copy/paste styles). Type-specific properties are
+ * absent when the source element doesn't carry them. */
+export interface ElementStyle {
+  strokeColor: string;
+  backgroundColor: string;
+  fillStyle: FillStyle;
+  strokeWidth: number;
+  strokeStyle: StrokeStyle;
+  roughness: number;
+  roundness: { type: number } | null;
+  opacity: number;
+  fontFamily?: number;
+  fontSize?: number;
+  textAlign?: TextAlign;
+  startArrowhead?: Arrowhead | null;
+  endArrowhead?: Arrowhead | null;
+}
 export type Alignment = "left" | "centerX" | "right" | "top" | "centerY" | "bottom";
 export type FlowchartDirection = "up" | "down" | "left" | "right";
 
@@ -1145,6 +1167,11 @@ export class EditorController {
     });
   }
 
+  /** The topmost element hit at `point`, or null — for the host's context menu. */
+  hitElement(point: Point, type: PointerType = "mouse"): string | null {
+    return this.topElement(point, type);
+  }
+
   private topElement(point: Point, type: PointerType): string | null {
     const threshold = this.handleHitRadius(type);
     const visible = this.scene.visibleElements;
@@ -1559,6 +1586,94 @@ export class EditorController {
         y: container.y + container.height / 2 - layout.height / 2,
       });
     }
+  }
+
+  /** A snapshot of an element's style properties (copy/paste styles). */
+  styleOf(id: string): ElementStyle | null {
+    const el = this.scene.element(id);
+    if (el === undefined) return null;
+    const style: ElementStyle = {
+      strokeColor: el.strokeColor,
+      backgroundColor: el.backgroundColor,
+      fillStyle: el.fillStyle,
+      strokeWidth: el.strokeWidth,
+      strokeStyle: el.strokeStyle,
+      roughness: el.roughness,
+      roundness: el.roundness,
+      opacity: el.opacity,
+    };
+    if (el.type === "text") {
+      style.fontFamily = el.fontFamily;
+      style.fontSize = el.fontSize;
+      style.textAlign = el.textAlign;
+    }
+    if (el.type === "arrow") {
+      style.startArrowhead = el.startArrowhead;
+      style.endArrowhead = el.endArrowhead;
+    }
+    return style;
+  }
+
+  /**
+   * Apply a captured style to every selected element as one undo step.
+   * Properties that don't apply to an element's type are skipped (fonts on a
+   * rectangle, arrowheads on an ellipse); geometry, ids, bindings, and group
+   * membership are untouched.
+   */
+  applyStyle(style: ElementStyle): void {
+    if (this.selectedIDs.size === 0) return;
+    this.updateSelected((el) => {
+      el.strokeColor = style.strokeColor;
+      el.backgroundColor = style.backgroundColor;
+      el.fillStyle = style.fillStyle;
+      el.strokeWidth = style.strokeWidth;
+      el.strokeStyle = style.strokeStyle;
+      el.roughness = style.roughness;
+      el.roundness = style.roundness;
+      el.opacity = style.opacity;
+      if (el.type === "text") {
+        if (style.fontFamily !== undefined) el.fontFamily = style.fontFamily;
+        if (style.fontSize !== undefined) el.fontSize = style.fontSize;
+        if (style.textAlign !== undefined) el.textAlign = style.textAlign;
+      }
+      if (el.type === "arrow") {
+        if (style.startArrowhead !== undefined) el.startArrowhead = style.startArrowhead;
+        if (style.endArrowhead !== undefined) el.endArrowhead = style.endArrowhead;
+      }
+    });
+  }
+
+  /**
+   * Wrap the selection in a new frame (bounds + margin), adopting the selected
+   * elements as its children and selecting the frame — one undo step.
+   */
+  wrapSelectionInFrame(margin = 24): string | null {
+    const bounds = this.selectionBounds;
+    if (bounds === null) return null;
+    const ids = new Set(this.selectedIDs);
+    const frame: ExcalidrawElement = {
+      ...makeBase(
+        this.currentItem,
+        this.nextID(),
+        this.nextSeed(),
+        bounds.minX - margin,
+        bounds.minY - margin,
+      ),
+      type: "frame",
+      name: null,
+      width: bounds.width + 2 * margin,
+      height: bounds.height + 2 * margin,
+      backgroundColor: "transparent",
+    };
+    this.store.transaction((scene) => {
+      // The frame sits below its children so it never covers them.
+      const rest = scene.elements.filter((e) => !ids.has(e.id));
+      const moving = scene.elements.filter((e) => ids.has(e.id));
+      scene.replaceAll([...rest, frame, ...moving]);
+      for (const el of moving) scene.replace({ ...el, frameId: frame.id });
+    });
+    this.selectedIDs = new Set([frame.id]);
+    return frame.id;
   }
 
   /** Shape types that can take a double-click label (bindable containers). */

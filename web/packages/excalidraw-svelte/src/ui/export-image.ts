@@ -1,16 +1,11 @@
+import { commonBounds } from "../geometry/index.js";
+import { Scene } from "../model/index.js";
+import { Viewport, embedScene, exportSvg, renderScene } from "../render/index.js";
 // Image export pipeline: rasterize the scene (or the selection) to a PNG via
 // an offscreen canvas — optionally embedding the scene for round-trip — or
 // produce an SVG string. The package renderer stays DOM-free; the canvas and
 // bitmap loading live here in the host.
-import type { EditorStore } from "@cyberdynecorp/excalidraw-svelte";
-import { commonBounds } from "@cyberdynecorp/excalidraw-svelte/geometry";
-import { Scene } from "@cyberdynecorp/excalidraw-svelte/model";
-import {
-  Viewport,
-  embedScene,
-  exportSvg,
-  renderScene,
-} from "@cyberdynecorp/excalidraw-svelte/render";
+import type { EditorStore } from "../svelte/editor-store.js";
 
 export interface ExportImageOptions {
   scale: 1 | 2 | 3;

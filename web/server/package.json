@@ -1,6 +1,6 @@
 {
   "name": "@cyberdynecorp/excalidraw-relay",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "WebSocket relay server for collaboration — rooms, presence, and version-reconciled scene sync.",
   "type": "module",
   "main": "./dist/index.js",

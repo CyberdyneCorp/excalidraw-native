@@ -12,6 +12,7 @@ export {
   type Alignment,
   EditorController,
   type FlowchartDirection,
+  type ElementStyle,
   type ZOrder,
 } from "./controller.js";
 export { parseMermaid } from "./mermaid.js";

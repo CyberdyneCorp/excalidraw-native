@@ -56,7 +56,7 @@ bindings work for arrows). This was host/controller wiring.
 4. **Typing guard.** Single-letter tool shortcuts must never fire while a text
    editor is open/focused; audit all `onKeydown` paths in `App.svelte`.
 
-## Phase 2 — Editing surface (P1)
+## Phase 2 — Editing surface (P1) — ✅ complete
 
 1. **Dark-theme element inversion** — ✅ done early, shipped with Phase 1
    (`themeColor` paint-time mapping in the renderer).
@@ -66,9 +66,11 @@ bindings work for arrows). This was host/controller wiring.
    opacity, font family/size/align, arrow type (straight/curved/elbow) +
    arrowheads; sections shown per selection/tool, controls reflect the
    selection.
-3. **Context menu parity** — cut/copy/paste, copy as PNG/SVG, copy/paste
-   styles, flip H/V, 4-step z-order (fwd/back/front/bottom), lock, add link,
-   wrap in frame; distinct empty-canvas menu (paste, select all, zoom to fit).
+3. **Context menu parity** — ✅ implemented via the
+   `web-context-menu-clipboard` change (2026-07-11): system-clipboard
+   cut/copy/paste (incl. external images and text), copy as PNG/SVG,
+   copy/paste styles, wrap in frame, flip H/V, 4-step z-order, lock, add
+   link; distinct empty-canvas menu (paste, select all, zoom to fit).
 
 ## Phase 3 — App chrome & flows (P2) — ✅ implemented
 
@@ -90,10 +92,12 @@ landed earlier with Phase 1.
 
 ## Phase 4 — Smart features & polish (P3)
 
-1. **Flowchart quick-create** — hover quick-arrow button and Cmd/Ctrl+arrow
-   node spawning (`smart-features` spec covers the iOS behavior).
-2. **Canvas helpers** — zoom-to-fit, scroll-back-to-content pill, grid/snap
-   toggles, zen mode, command palette (`platform-ux` spec).
+1. **Flowchart quick-create** — ✅ implemented (`web-smart-canvas`, 2026-07-11):
+   Cmd/Ctrl+arrow spawning and hover quick-arrow buttons.
+2. **Canvas helpers** — ✅ implemented (`web-smart-canvas`): zoom-to-fit,
+   scroll-back-to-content pill, grid + snap toggles (the grid was declared in
+   `RenderOptions` but never drawn — now implemented), zen mode, command
+   palette, plus freehand shape recognition ("Snap to shape").
 3. **Library panel** — `.excalidrawlib` import/insert (`file-format` spec).
 4. **Share/collab UI** — a dialog around the existing relay/Yjs collab so
    rooms aren't URL-parameter-only.

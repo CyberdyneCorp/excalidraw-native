@@ -387,6 +387,190 @@ function minimalPng(): Uint8Array {
   ]);
 }
 
+describe("smart canvas", () => {
+  function drawRect(store: EditorStore, x = 100, y = 100) {
+    store.selectTool("rectangle");
+    store.pointer("down", new Point(x, y));
+    store.pointer("move", new Point(x + 120, y + 90));
+    store.pointer("up", new Point(x + 120, y + 90));
+  }
+
+  it("quick-create spawns a connected node and gates on the selection", () => {
+    const store = new EditorStore();
+    expect(store.canQuickCreate).toBe(false); // nothing selected
+    drawRect(store);
+    expect(store.canQuickCreate).toBe(true);
+
+    store.addFlowchartNode("right");
+    const rects = store.scene.visibleElements.filter((e) => e.type === "rectangle");
+    const arrow = store.scene.visibleElements.find((e) => e.type === "arrow")!;
+    expect(rects).toHaveLength(2);
+    expect(rects[1]!.x).toBeGreaterThan(rects[0]!.x); // spawned to the right
+    expect(arrow.startBinding).not.toBeNull();
+    expect(arrow.endBinding).not.toBeNull();
+
+    // A linear selection can't quick-create.
+    store.selectTool("selection");
+    store.controller.selectedIDs = new Set([arrow.id]);
+    expect(store.canQuickCreate).toBe(false);
+  });
+
+  it("contentOffscreen flips when the content is scrolled out of view", () => {
+    const store = new EditorStore();
+    store.canvasWidth = 800;
+    store.canvasHeight = 600;
+    expect(store.contentOffscreen).toBe(false); // empty scene
+    drawRect(store, 100, 100);
+    expect(store.contentOffscreen).toBe(false);
+
+    store.panZoom(-5000, -5000, 1); // scroll far away
+    expect(store.contentOffscreen).toBe(true);
+
+    store.scrollToContent();
+    expect(store.contentOffscreen).toBe(false);
+  });
+
+  it("grid and snap toggles flip host state", () => {
+    const store = new EditorStore();
+    expect(store.gridEnabled).toBe(false);
+    store.toggleGrid();
+    expect(store.gridEnabled).toBe(true);
+
+    expect(store.snapEnabled).toBe(false);
+    store.toggleSnap();
+    expect(store.snapEnabled).toBe(true);
+  });
+
+  it("recognizeSelectedStroke snaps a rough rectangle sketch to a rectangle", () => {
+    const store = new EditorStore();
+    store.selectTool("freedraw");
+    // Trace a rough closed rectangle.
+    const path: [number, number][] = [
+      [100, 100],
+      [200, 102],
+      [298, 100],
+      [300, 200],
+      [302, 298],
+      [200, 300],
+      [102, 298],
+      [100, 200],
+      [100, 102],
+    ];
+    store.pointer("down", new Point(path[0]![0], path[0]![1]));
+    for (const [x, y] of path.slice(1)) store.pointer("move", new Point(x, y));
+    store.pointer("up", new Point(path.at(-1)![0], path.at(-1)![1]));
+    const stroke = store.scene.visibleElements.find((e) => e.type === "freedraw")!;
+    store.controller.selectedIDs = new Set([stroke.id]);
+
+    store.recognizeSelectedStroke();
+    expect(store.scene.visibleElements.some((e) => e.type === "rectangle")).toBe(true);
+    expect(store.scene.visibleElements.some((e) => e.type === "freedraw")).toBe(false);
+  });
+});
+
+describe("clipboard, styles, and frames", () => {
+  function drawRect(store: EditorStore, x = 100, y = 100) {
+    store.selectTool("rectangle");
+    store.pointer("down", new Point(x, y));
+    store.pointer("move", new Point(x + 100, y + 80));
+    store.pointer("up", new Point(x + 100, y + 80));
+    return store.scene.visibleElements.find((e) => e.type === "rectangle" && e.x >= x - 1)!;
+  }
+
+  it("copy → paste adds distinct elements and leaves the originals alone", () => {
+    const store = new EditorStore();
+    drawRect(store);
+    const json = store.copySelection();
+    expect(json).not.toBeNull();
+
+    const idsBefore = store.scene.visibleElements.map((e) => e.id);
+    store.pasteJSON(json!, new Point(500, 400));
+    const all = store.scene.visibleElements;
+    expect(all).toHaveLength(2);
+    const pasted = all.filter((e) => !idsBefore.includes(e.id));
+    expect(pasted).toHaveLength(1);
+    // Pasted content is centred on the paste point and selected.
+    expect(pasted[0]!.x + pasted[0]!.width / 2).toBeCloseTo(500, 0);
+    expect(pasted[0]!.y + pasted[0]!.height / 2).toBeCloseTo(400, 0);
+    expect(store.selectedCount).toBe(1);
+  });
+
+  it("cut removes the selection in one undo step", () => {
+    const store = new EditorStore();
+    drawRect(store);
+    const json = store.cutSelection();
+    expect(json).not.toBeNull();
+    expect(store.scene.visibleElements).toHaveLength(0);
+    store.undo();
+    expect(store.scene.visibleElements).toHaveLength(1);
+  });
+
+  it("pasteText creates a text element at the paste point", () => {
+    const store = new EditorStore();
+    store.pasteText("from clipboard", new Point(300, 200));
+    const text = store.scene.visibleElements.find((e) => e.type === "text")!;
+    expect(text.text).toBe("from clipboard");
+  });
+
+  it("copy → paste styles transfers style across types, undoable in one step", () => {
+    const store = new EditorStore();
+    const rect = drawRect(store);
+    store.setStrokeColor("#e03131");
+    store.setStrokeStyle("dashed");
+    store.setOpacity(50);
+    expect(store.copyStyles()).toBe(true);
+    expect(store.hasCopiedStyles).toBe(true);
+
+    // A plain ellipse elsewhere takes the copied style. (Deselect first: the
+    // style setters apply to the current selection.)
+    store.selectTool("selection");
+    store.pointer("down", new Point(700, 600));
+    store.pointer("up", new Point(700, 600));
+    store.selectTool("ellipse");
+    store.setStrokeColor("#1e1e1e");
+    store.setStrokeStyle("solid");
+    store.setOpacity(100);
+    store.pointer("down", new Point(400, 100));
+    store.pointer("move", new Point(500, 180));
+    store.pointer("up", new Point(500, 180));
+    const before = store.scene.visibleElements.find((e) => e.type === "ellipse")!;
+    expect(before.strokeColor).toBe("#1e1e1e");
+
+    store.pasteStyles();
+    const after = store.scene.visibleElements.find((e) => e.type === "ellipse")!;
+    expect(after.strokeColor).toBe("#e03131");
+    expect(after.strokeStyle).toBe("dashed");
+    expect(after.opacity).toBe(50);
+    // Geometry untouched; one undo restores the previous style.
+    expect(after.x).toBeCloseTo(before.x, 5);
+    store.undo();
+    const undone = store.scene.visibleElements.find((e) => e.type === "ellipse")!;
+    expect(undone.strokeColor).toBe("#1e1e1e");
+    // The source rectangle is unaffected throughout.
+    expect(store.scene.element(rect.id)?.strokeColor).toBe("#e03131");
+  });
+
+  it("wrapSelectionInFrame creates a frame that adopts the selection", () => {
+    const store = new EditorStore();
+    drawRect(store, 100, 100);
+    drawRect(store, 300, 100);
+    store.selectAll();
+    store.wrapSelectionInFrame();
+
+    const frame = store.scene.visibleElements.find((e) => e.type === "frame")!;
+    const rects = store.scene.visibleElements.filter((e) => e.type === "rectangle");
+    expect(rects).toHaveLength(2);
+    expect(rects.every((r) => r.frameId === frame.id)).toBe(true);
+    // The frame encloses both shapes and is selected.
+    expect(frame.x).toBeLessThan(100);
+    expect(frame.x + frame.width).toBeGreaterThan(400);
+    expect(store.selectedCount).toBe(1);
+
+    store.undo();
+    expect(store.scene.visibleElements.some((e) => e.type === "frame")).toBe(false);
+  });
+});
+
 describe("app chrome store passthroughs", () => {
   it("tool lock keeps the drawing tool active across creations", () => {
     const store = new EditorStore();

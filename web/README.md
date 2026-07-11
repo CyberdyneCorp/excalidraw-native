@@ -57,6 +57,96 @@ store.startCollab(reconnectingSocket(() => browserSocket("wss://relay.example/ws
 
 The `apps/web` demo app is **not** published.
 
+## Embedding the editor
+
+The whole editor ships as a Svelte 5 component — you don't have to build any UI:
+
+```svelte
+<script lang="ts">
+  import { Excalidraw } from "@cyberdynecorp/excalidraw-svelte/ui";
+</script>
+
+<Excalidraw />
+```
+
+`svelte` is an (optional) **peer dependency**: only the `./ui` subpath needs it — the headless subpaths (`./editor`, `./render`, `./model`, `./geometry`, `./math`, `./protocol`) are plain TS and work without Svelte, exactly as before.
+
+### Props
+
+| Prop | Type | What it does |
+| --- | --- | --- |
+| `initialData` | `Scene \| string` | A scene or an `.excalidraw` document, loaded on mount |
+| `theme` | `"light" \| "dark"` | Kept in sync with the store when you change it |
+| `viewMode` | `boolean` | Read-only: pointer edits are swallowed; pan/zoom still work |
+| `gridMode` / `zenMode` | `boolean` | Host-controlled grid and zen mode |
+| `uiOptions` | `UIOptions` | Hide or narrow any piece of chrome (below) |
+| `overlayColors` | `OverlayColors` | Selection accent, binding highlight, snap guides, handle fill |
+| `onReady` | `(store) => void` | Receives the live `EditorStore` once, on mount |
+| `onChange` | `(scene) => void` | Fires after every committed edit |
+
+Slots (Svelte 5 snippets): `toolbarExtra`, `topRight`, `footer` — your chrome renders *alongside* the built-in UI.
+
+### `uiOptions` — hide or narrow the chrome
+
+Everything is on by default. Pass `false` to drop a whole section, or an object to override individual entries:
+
+```svelte
+<Excalidraw
+  uiOptions={{
+    toolbar: { tools: ["selection", "rectangle", "arrow"], lock: false, more: false },
+    panel: false,                    // no style panel
+    menu: { export: false },         // menu, minus "Export image…"
+    contextMenu: { link: false },    // context menu, minus "Add link"
+    palette: false,
+    welcome: false,
+  }}
+/>
+```
+
+Sections: `toolbar` (`tools`, `lock`, `image`, `more`), `panel`, `menu` (`open`, `save`, `export`, `reset`, `theme`, `help`), `contextMenu` (`clipboard`, `copyAsImage`, `styles`, `frame`, `shapeRecognition`, `duplicate`, `grouping`, `zOrder`, `flip`, `link`, `lock`, `deletion`), `palette`, `welcome`, `help`, `zoomIsland`, `undoIsland`, `viewIsland`, `quickArrows`, `generators` (`note`, `table`, `chart`, `mermaid`), `quickActions`.
+
+**Hiding chrome never removes capability** — a hidden export button doesn't stop you calling `store.exportSvg()` from `onReady`.
+
+### Theming
+
+The component's colours come from documented CSS custom properties you can override from your own stylesheet (both themes):
+
+```css
+.my-editor :global(.app) {
+  --excal-island: #10233a;      /* panel/toolbar surface */
+  --excal-ink: #e8f1ff;         /* primary text */
+  --excal-muted: #8aa;          /* secondary text */
+  --excal-border: #ffffff22;
+  --excal-hover: #16324f;
+  --excal-accent-bg: #ff5a5f;   /* active tool background */
+  --excal-accent-ink: #ffffff;  /* active tool foreground */
+  --excal-shadow: 0 8px 24px #0006;
+}
+```
+
+The interaction overlay is themed through the `overlayColors` prop:
+
+```svelte
+<Excalidraw overlayColors={{ accent: "#ff5a5f", bindingHighlight: "#00d4a0" }} />
+```
+
+### Just the canvas
+
+For a fully custom UI, render the bare canvas and drive it through the store:
+
+```svelte
+<script lang="ts">
+  import { EditorStore } from "@cyberdynecorp/excalidraw-svelte";
+  import { ExcalidrawCanvas } from "@cyberdynecorp/excalidraw-svelte/ui";
+  const store = new EditorStore();
+  let rev = $state(0);
+</script>
+
+<ExcalidrawCanvas {store} {rev} />
+```
+
+A runnable example of all of the above lives in `apps/web/src/EmbedDemo.svelte` (served at `/embed.html`).
+
 ## Collaboration backends
 
 Two interchangeable web collaboration backends; the element-LWW engine is canonical.
@@ -82,7 +172,7 @@ pnpm build:libs              # tsc → dist (.js + .d.ts) for the library and th
 pnpm publish:libs            # rewrites workspace:* → versions, publishes to the configured registry
 ```
 
-Versions live in each package's `package.json` (currently `0.9.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
+Versions live in each package's `package.json` (currently `0.10.0`); the `excalidraw-svelte`, `excalidraw-yjs`, and `excalidraw-relay` (server) packages are released together at the same version. A version tag push (e.g. `0.5.3`) publishes them automatically via `.github/workflows/publish.yml`, which asserts the tag matches all three package versions.
 
 ## Develop
 
@@ -399,3 +489,25 @@ pnpm --filter excalidraw-web-app e2e                                # screenshot
     screen** on an empty canvas, and a **help overlay** (`?`) with the shortcut
     map. The renderer gained an export-only background override
     (`RenderOptions.background`), paint-time only.
+  - **Context menu & clipboard (Phase 2 completion, `web-context-menu-clipboard`):**
+    system-clipboard **cut/copy/paste** (⌘X/⌘C/⌘V and menu) carrying the
+    `.excalidraw` payload — so copy/paste interoperates with excalidraw.com —
+    plus pasting **external images and plain text**, landing at the cursor.
+    **Copy to clipboard as PNG / as SVG**, **copy & paste styles**, and **wrap
+    selection in frame**. The context menu now mirrors excalidraw: the element
+    menu carries the full command set (clipboard, styles, frame, duplicate,
+    group/ungroup, 4-step z-order, flip H/V, add link, lock, delete) while
+    empty canvas gets the short one (paste, select all, zoom to fit) — keyed on
+    what was right-clicked, not merely on the selection. New core APIs:
+    `styleOf`/`applyStyle`, `wrapSelectionInFrame`, `hitElement`, and store
+    clipboard passthroughs; `zoomToFit` landed too.
+  - **Smart canvas (Phase 4, `web-smart-canvas`):** **flowchart quick-create** —
+    `Cmd/Ctrl + ↑↓←→` (and four hover quick-arrow buttons around a selected
+    shape) spawns a connected node, building a flowchart without leaving the
+    keyboard. **Snap to shape** turns a rough freedraw sketch into a real
+    primitive. Canvas helpers: **zoom-to-fit** (`Shift+1`), a
+    **scroll-back-to-content** pill, and **grid + snap** toggles — the grid was
+    declared in `RenderOptions` but never actually drawn, so the renderer now
+    implements it. **Zen mode** (`Alt+Z`) hides all chrome but the canvas and
+    zoom island, and a **command palette** (`Cmd/Ctrl+K`) runs every tool and
+    action through the same handlers as the menus.

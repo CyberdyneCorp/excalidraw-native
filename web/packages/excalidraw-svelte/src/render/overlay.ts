@@ -3,11 +3,27 @@ import type { Point } from "../math/index.js";
 import type { RenderContext } from "./scene-renderer.js";
 import type { Viewport } from "./viewport.js";
 
-const ACCENT = "#6b82f5"; // Excalidraw violet
-const BINDING_HIGHLIGHT = "#68b1ec"; // suggested-binding ring (excalidraw blue)
-const ACCENT_FILL = "rgba(107,130,245,0.08)";
-const SNAP = "rgba(232,77,61,0.9)";
-const WHITE = "#ffffff";
+/** Interaction-overlay colours; clients may override any of them. */
+export interface OverlayColors {
+  /** Selection box, handles, and linear-edit points. */
+  accent?: string;
+  /** Marquee fill. */
+  accentFill?: string;
+  /** Suggested-binding ring and anchor placeholders. */
+  bindingHighlight?: string;
+  /** Object/gap snap guides. */
+  snap?: string;
+  /** Handle interiors. */
+  handleFill?: string;
+}
+
+export const defaultOverlayColors: Required<OverlayColors> = {
+  accent: "#6b82f5", // Excalidraw violet
+  accentFill: "rgba(107,130,245,0.08)",
+  bindingHighlight: "#68b1ec", // suggested-binding ring (excalidraw blue)
+  snap: "rgba(232,77,61,0.9)",
+  handleFill: "#ffffff",
+};
 const TWO_PI = Math.PI * 2;
 
 export interface TrailDot {
@@ -41,6 +57,8 @@ export interface OverlayOptions {
   /** Anchor placeholders (side midpoints) where a click-to-connect arrow can
    * start or stop on the suggested shape. */
   suggestedAnchors?: Point[];
+  /** Overlay colour overrides (defaults are the excalidraw-like palette). */
+  colors?: OverlayColors;
 }
 
 const TRAIL_FADE = 0.7;
@@ -70,7 +88,14 @@ function drawTrail(
   ctx.globalAlpha = 1;
 }
 
-function squareHandle(ctx: RenderContext, p: Point, size: number, lineWidth: number): void {
+function squareHandle(
+  ctx: RenderContext,
+  p: Point,
+  size: number,
+  lineWidth: number,
+  colors: Required<OverlayColors>,
+): void {
+  const { accent: ACCENT, handleFill: WHITE } = colors;
   ctx.fillStyle = WHITE;
   ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
   ctx.strokeStyle = ACCENT;
@@ -78,7 +103,14 @@ function squareHandle(ctx: RenderContext, p: Point, size: number, lineWidth: num
   ctx.strokeRect(p.x - size / 2, p.y - size / 2, size, size);
 }
 
-function circleHandle(ctx: RenderContext, p: Point, size: number, lineWidth: number): void {
+function circleHandle(
+  ctx: RenderContext,
+  p: Point,
+  size: number,
+  lineWidth: number,
+  colors: Required<OverlayColors>,
+): void {
+  const { accent: ACCENT, handleFill: WHITE } = colors;
   ctx.beginPath();
   ctx.arc(p.x, p.y, size / 2, 0, TWO_PI);
   ctx.fillStyle = WHITE;
@@ -95,6 +127,14 @@ function circleHandle(ctx: RenderContext, p: Point, size: number, lineWidth: num
  */
 export function renderOverlay(ctx: RenderContext, o: OverlayOptions): void {
   const v = o.viewport;
+  const colors: Required<OverlayColors> = { ...defaultOverlayColors, ...o.colors };
+  const {
+    accent: ACCENT,
+    accentFill: ACCENT_FILL,
+    bindingHighlight: BINDING_HIGHLIGHT,
+    snap: SNAP,
+    handleFill: WHITE,
+  } = colors;
   ctx.save();
   ctx.scale(v.zoom, v.zoom);
   ctx.translate(v.scrollX, v.scrollY);
@@ -170,9 +210,9 @@ export function renderOverlay(ctx: RenderContext, o: OverlayOptions): void {
       ctx.moveTo((bounds.minX + bounds.maxX) / 2, bounds.minY);
       ctx.lineTo(rotationHandle.x, rotationHandle.y);
       ctx.stroke();
-      circleHandle(ctx, rotationHandle, handleSize, lineWidth);
+      circleHandle(ctx, rotationHandle, handleSize, lineWidth, colors);
     }
-    for (const handle of o.handles ?? []) squareHandle(ctx, handle, handleSize, lineWidth);
+    for (const handle of o.handles ?? []) squareHandle(ctx, handle, handleSize, lineWidth, colors);
   }
 
   const cropFrame = o.cropFrame ?? null;
@@ -181,10 +221,12 @@ export function renderOverlay(ctx: RenderContext, o: OverlayOptions): void {
     ctx.lineWidth = lineWidth * 2;
     ctx.setLineDash([]);
     ctx.strokeRect(cropFrame.minX, cropFrame.minY, cropFrame.width, cropFrame.height);
-    for (const handle of o.cropHandles ?? []) squareHandle(ctx, handle, handleSize, lineWidth);
+    for (const handle of o.cropHandles ?? [])
+      squareHandle(ctx, handle, handleSize, lineWidth, colors);
   }
 
-  for (const mid of o.linearMidpoints ?? []) circleHandle(ctx, mid, handleSize * 0.8, lineWidth);
+  for (const mid of o.linearMidpoints ?? [])
+    circleHandle(ctx, mid, handleSize * 0.8, lineWidth, colors);
   for (const p of o.linearPoints ?? []) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, handleSize / 2, 0, TWO_PI);

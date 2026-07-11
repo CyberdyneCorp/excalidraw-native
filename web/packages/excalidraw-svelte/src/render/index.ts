@@ -10,5 +10,11 @@ export {
   type Theme,
   renderScene,
 } from "./scene-renderer.js";
-export { type OverlayOptions, type TrailDot, renderOverlay } from "./overlay.js";
+export {
+  type OverlayColors,
+  type OverlayOptions,
+  type TrailDot,
+  defaultOverlayColors,
+  renderOverlay,
+} from "./overlay.js";
 export { themeColor } from "./theme-color.js";

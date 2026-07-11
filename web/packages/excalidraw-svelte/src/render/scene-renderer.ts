@@ -217,6 +217,29 @@ function drawFrame(ctx: RenderContext, el: ExcalidrawElement): void {
   ctx.stroke();
 }
 
+/**
+ * Paint the background grid over the visible scene region (parity:
+ * SceneRenderer's grid). Drawn in scene space, so it pans and zooms with the
+ * content; hairline width keeps it crisp at any zoom.
+ */
+function drawGrid(ctx: RenderContext, region: BoundingBox, size: number, theme: Theme): void {
+  if (size <= 0) return;
+  const first = (v: number) => Math.floor(v / size) * size;
+  ctx.strokeStyle = theme === "dark" ? "#ffffff14" : "#00000012";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  for (let x = first(region.minX); x <= region.maxX; x += size) {
+    ctx.moveTo(x, region.minY);
+    ctx.lineTo(x, region.maxY);
+  }
+  for (let y = first(region.minY); y <= region.maxY; y += size) {
+    ctx.moveTo(region.minX, y);
+    ctx.lineTo(region.maxX, y);
+  }
+  ctx.stroke();
+}
+
 function visibleRegion(opts: RenderOptions): BoundingBox {
   const { viewport: v, width, height } = opts;
   return new BoundingBox(
@@ -244,6 +267,9 @@ export function renderScene(ctx: RenderContext, scene: Scene, opts: RenderOption
   ctx.translate(opts.viewport.scrollX, opts.viewport.scrollY);
 
   const region = visibleRegion(opts);
+  if (opts.gridSize !== undefined && opts.gridSize > 0) {
+    drawGrid(ctx, region, opts.gridSize, theme);
+  }
   const elements = cullVisible(scene.visibleElements, region, 100);
 
   for (const source of elements) {
